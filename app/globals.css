@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+/* Modo escuro via classe .dark na <html> (alternado pelo botão no cabeçalho
+   e lembrado no localStorage) — Tailwind não fica de olho em classe nenhuma
+   por padrão no v4, esse @custom-variant é o que ativa o prefixo `dark:` em
+   todo o app. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Paleta Infinity — preto no fundo escuro, com os detalhes em azul e
+     branco (em vez de navy chapado); no conteúdo claro, texto preto com
+     detalhes em azul. --color-navy-950 é o preto "de marca" — quase puro,
+     com uma sombra de azul só o suficiente pra não ficar um preto morto. */
+  --color-navy-950: #050608;
+  --color-navy-900: #0a0e16;
+  --color-navy-800: #0d1730;
+  --color-navy-700: #142348;
+  --color-navy-600: #2a5ca8;
+  --color-accent: #2f7dfb;
+  --color-accent-dark: #1c5ee0;
+  --color-accent-soft: #eaf1ff;
+  --color-sky: #7fc2ff;
+  --color-gain: #16a34a;
+  --color-loss: #dc2626;
+  --color-canvas: #f5f7fb;
+  --color-ink: #000000;
+
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.04), 0 10px 28px rgba(10, 20, 40, 0.08);
+  --shadow-lift:
+    0 16px 40px rgba(0, 0, 0, 0.22), 0 4px 10px rgba(0, 0, 0, 0.14);
+  --shadow-accent: 0 10px 24px rgba(47, 125, 251, 0.32);
+}
+
+/* Modo escuro: fundo preto (mesmo preto de marca do hero), detalhes em
+   branco — o azul do acento não muda entre os dois modos, só o fundo e o
+   texto, exatamente como pedido. */
+.dark {
+  --color-canvas: var(--color-navy-950);
+  --color-ink: #ffffff;
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.45);
+  --shadow-lift:
+    0 16px 40px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35);
+  --color-chart-grid: rgba(255, 255, 255, 0.12);
+  --color-chart-axis: #8ea2c4;
+  --color-chart-label: #e2e8f0;
+  --color-tooltip-bg: var(--color-navy-900);
+  --color-tooltip-border: rgba(255, 255, 255, 0.12);
+}
+
+/* Cores dos gráficos (Recharts usa atributos SVG, não classes Tailwind) —
+   ficam centralizadas aqui em variáveis pra não precisar mexer em cada
+   gráfico na mão; no claro usa os tons neutros de sempre. */
+:root {
+  --color-chart-grid: #e2e8f0;
+  --color-chart-axis: #64748b;
+  --color-chart-label: #334155;
+  --color-tooltip-bg: #ffffff;
+  --color-tooltip-border: #e2e8f0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial,
+    sans-serif;
+  background: var(--color-canvas);
+  transition: background-color 0.2s ease;
+}
+
+/* Esconde a barra de rolagem em tabelas horizontais sem perder a função */
+.scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---------- Sistema visual orgânico ----------
+   Cabeçalhos com gradiente escuro + "blobs" desfocados (formas orgânicas,
+   sem precisar de imagem) — usado nos headers do app e na tela de login,
+   inspirado no visual "hero" de apps como Nubank/BTG. */
+.hero-organic {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    150deg,
+    #000000 0%,
+    var(--color-navy-800) 50%,
+    #000000 100%
+  );
+  overflow: hidden;
+}
+
+.hero-organic::before,
+.hero-organic::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 999px;
+  filter: blur(48px);
+  pointer-events: none;
+}
+
+.hero-organic::before {
+  width: 220px;
+  height: 220px;
+  background: var(--color-accent);
+  opacity: 0.45;
+  top: -110px;
+  right: -60px;
+}
+
+.hero-organic::after {
+  width: 200px;
+  height: 200px;
+  background: var(--color-sky);
+  opacity: 0.28;
+  bottom: -120px;
+  left: -40px;
+}
+
+/* Botão de destaque com gradiente do acento — usado nas ações principais.
+   Três tons de azul, não só dois, pra ficar um degradê com mais corpo. */
+.btn-accent {
+  background: linear-gradient(
+    135deg,
+    var(--color-sky) 0%,
+    var(--color-accent) 55%,
+    var(--color-accent-dark) 100%
+  );
+  box-shadow: var(--shadow-accent);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease;
+}
+
+.btn-accent:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow: 0 14px 30px rgba(47, 125, 251, 0.4);
+}
+
+.btn-accent:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+/* Sheen sutil nos cards claros — um fiapo de degradê em vez de branco chapado.
+   No escuro vira um degradê bem sutil de navy (não preto chapado igual o
+   fundo), pra dar uma leve elevação ao card sem perder o clima "preto com
+   detalhe". Como isso é centralizado aqui, todo card com essa classe já
+   ganha o modo escuro automaticamente, sem precisar mexer em cada tela. */
+.card-sheen {
+  background: linear-gradient(160deg, #ffffff 0%, #f7f9fd 100%);
+}
+
+.dark .card-sheen {
+  background: linear-gradient(
+    160deg,
+    var(--color-navy-900) 0%,
+    #0c1424 100%
+  );
+}
+
+/* Texto com o degradê do acento "pintado" nele — usado em números/títulos
+   de destaque pra reforçar o efeito moderno sem depender só de cor sólida. */
+.text-gradient-accent {
+  background: linear-gradient(
+    135deg,
+    var(--color-sky) 0%,
+    var(--color-accent) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
