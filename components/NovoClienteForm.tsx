@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "./Toast";
 
 interface CarteiraModeloOpcao {
   id: number;
@@ -53,6 +54,7 @@ export default function NovoClienteForm({
   carteirasModelo: CarteiraModeloOpcao[];
 }) {
   const router = useRouter();
+  const { mostrarToast } = useToast();
   const [respostas, setRespostas] = useState<Record<string, number>>({});
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
@@ -92,6 +94,7 @@ export default function NovoClienteForm({
         setErro(data.erro ?? "Não foi possível cadastrar o cliente.");
         return;
       }
+      mostrarToast("Cliente cadastrado!");
       router.push(`/consultor/clientes/${data.clienteId}`);
       router.refresh();
     } catch {
@@ -235,7 +238,7 @@ export default function NovoClienteForm({
       </section>
 
       {erro && (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>
+        <p className="rounded-xl bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400">{erro}</p>
       )}
 
       <button

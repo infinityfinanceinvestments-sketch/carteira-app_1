@@ -245,7 +245,7 @@ export default function MercadoAoVivo({
           </button>
         </form>
         {erroAdicionar && (
-          <p className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+          <p className="mb-3 rounded-xl bg-red-50 dark:bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">
             {erroAdicionar}
           </p>
         )}
@@ -264,8 +264,8 @@ export default function MercadoAoVivo({
                 variacao == null
                   ? "text-slate-400 dark:text-slate-500"
                   : variacao >= 0
-                  ? "text-emerald-700"
-                  : "text-red-700";
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-red-700 dark:text-red-400";
               return (
                 <li key={ticker} className="flex items-center justify-between py-2.5">
                   <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{ticker}</span>
@@ -361,7 +361,7 @@ function CurvaSection({
       {carregando && !pontos ? (
         <p className="text-sm text-slate-400 dark:text-slate-500">Carregando…</p>
       ) : erro ? (
-        <p className="text-sm text-amber-700">{erro}</p>
+        <p className="text-sm text-amber-700 dark:text-amber-400">{erro}</p>
       ) : !selecionado ? (
         <p className="text-sm text-slate-400 dark:text-slate-500">Sem dados disponíveis no momento.</p>
       ) : (

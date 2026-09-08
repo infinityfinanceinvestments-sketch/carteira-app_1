@@ -144,7 +144,17 @@ export default async function ClienteDetalhePage({
       </section>
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
-        <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">Posições</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Posições</h2>
+          {posicoes.length > 0 && (
+            <a
+              href={`/api/clientes/${clienteId}/posicoes/exportar-csv`}
+              className="shrink-0 rounded-xl border border-slate-200 dark:border-white/10 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300"
+            >
+              Exportar CSV
+            </a>
+          )}
+        </div>
         {posicoes.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">
             Nenhuma posição cadastrada. Use “Importar CSV” para carregar a carteira.
@@ -185,7 +195,7 @@ export default async function ClienteDetalhePage({
           <LimparRecomendacoesAceitas clienteId={clienteId} quantidade={aceitas} />
         </div>
         {solicitacaoPendente && (
-          <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 ring-1 ring-amber-100">
+          <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 dark:bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300 dark:text-amber-300 ring-1 ring-amber-100 dark:ring-amber-500/20">
             <p className="font-medium">
               🔔 {cliente.nome} pediu uma recomendação em{" "}
               {new Date(solicitacaoPendente.criado_em).toLocaleDateString("pt-BR")}
@@ -193,13 +203,13 @@ export default async function ClienteDetalhePage({
             {solicitacaoPendente.mensagem && (
               <p className="mt-1 italic">&ldquo;{solicitacaoPendente.mensagem}&rdquo;</p>
             )}
-            <p className="mt-1 text-amber-700">
+            <p className="mt-1 text-amber-700 dark:text-amber-400">
               Criar uma recomendação nova pra ele abaixo já marca esse pedido como
               respondido.
             </p>
           </div>
         )}
-        <RecomendacaoForm clienteId={clienteId} />
+        <RecomendacaoForm clienteId={clienteId} desvios={desvio} />
         <ul className="space-y-2">
           {recomendacoes.map((r) => (
             <li key={r.id} className="rounded-xl border border-slate-100 dark:border-white/5 p-3">

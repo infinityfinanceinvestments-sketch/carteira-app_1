@@ -165,8 +165,8 @@ export default function ComparativoClientes({ clientes }: { clientes: ClienteCom
                       c.rentabilidadePercentual == null
                         ? "text-slate-400 dark:text-slate-500"
                         : c.rentabilidadePercentual >= 0
-                          ? "text-emerald-700"
-                          : "text-red-700"
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-red-700 dark:text-red-400"
                     }`}
                   >
                     {c.rentabilidadePercentual == null

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CLASSES_ATIVO } from "@/lib/types";
+import { useToast } from "./Toast";
 
 export interface AlocacaoInicial {
   classe: string;
@@ -23,6 +24,7 @@ export default function AlocacoesForm({
   descricaoInicial?: string;
 }) {
   const router = useRouter();
+  const { mostrarToast } = useToast();
   const [nome, setNome] = useState(nomeInicial);
   const [descricao, setDescricao] = useState(descricaoInicial);
   const [valores, setValores] = useState<Record<string, number>>(() => {
@@ -60,6 +62,7 @@ export default function AlocacoesForm({
           setErro(data.erro ?? "Não foi possível criar a carteira-modelo.");
           return;
         }
+        mostrarToast("Carteira-modelo criada!");
         router.push(`/consultor/carteiras-modelo/${data.id}`);
       } else if (carteiraModeloId) {
         const res = await fetch(`/api/carteiras-modelo/${carteiraModeloId}`, {
@@ -71,6 +74,7 @@ export default function AlocacoesForm({
           setErro("Não foi possível salvar as alocações.");
           return;
         }
+        mostrarToast("Alocações salvas!");
       }
       router.refresh();
     } catch {
@@ -122,7 +126,7 @@ export default function AlocacoesForm({
         ))}
         <div
           className={`flex justify-between border-t border-slate-100 dark:border-white/5 pt-2 text-sm font-medium ${
-            Math.round(soma) === 100 ? "text-emerald-700" : "text-amber-700"
+            Math.round(soma) === 100 ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"
           }`}
         >
           <span>Total</span>
@@ -131,7 +135,7 @@ export default function AlocacoesForm({
       </div>
 
       {erro && (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>
+        <p className="rounded-xl bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400">{erro}</p>
       )}
 
       <button

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "./Toast";
 
 const EXEMPLO_CSV = `ativo,classe,quantidade,preco_medio,valor_atual
 TESOURO SELIC 2029,Renda Fixa,10,1050.00,10800.00
@@ -71,6 +72,7 @@ export default function ImportarForm({
 }
 
 function ImportarB3({ clienteId, aoImportar }: { clienteId: string; aoImportar: () => void }) {
+  const { mostrarToast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [resultado, setResultado] = useState<{ importadas: number; avisos: string[] } | null>(null);
@@ -106,6 +108,7 @@ function ImportarB3({ clienteId, aoImportar }: { clienteId: string; aoImportar: 
       setResultado({ importadas: data.importadas, avisos: data.avisos ?? [] });
       setArquivo(null);
       if (fileRef.current) fileRef.current.value = "";
+      mostrarToast(`${data.importadas} posição(ões) importada(s)!`);
       aoImportar();
     } catch {
       setErro("Erro de conexão. Tente novamente.");
@@ -144,13 +147,13 @@ function ImportarB3({ clienteId, aoImportar }: { clienteId: string; aoImportar: 
         </p>
       </div>
 
-      {erro && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}
+      {erro && <p className="rounded-xl bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400">{erro}</p>}
 
       {resultado && (
-        <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300">
           <p>{resultado.importadas} posição(ões) importada(s) com sucesso.</p>
           {resultado.avisos.length > 0 && (
-            <ul className="mt-1 list-disc pl-4 text-xs text-amber-700">
+            <ul className="mt-1 list-disc pl-4 text-xs text-amber-700 dark:text-amber-400">
               {resultado.avisos.map((a, i) => (
                 <li key={i}>{a}</li>
               ))}
@@ -171,6 +174,7 @@ function ImportarB3({ clienteId, aoImportar }: { clienteId: string; aoImportar: 
 }
 
 function ImportarCsv({ clienteId, aoImportar }: { clienteId: string; aoImportar: () => void }) {
+  const { mostrarToast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [instituicao, setInstituicao] = useState("");
   const [csv, setCsv] = useState("");
@@ -210,6 +214,7 @@ function ImportarCsv({ clienteId, aoImportar }: { clienteId: string; aoImportar:
       setResultado({ importadas: data.importadas, erros: data.erros ?? [] });
       setCsv("");
       if (fileRef.current) fileRef.current.value = "";
+      mostrarToast(`${data.importadas} posição(ões) importada(s)!`);
       aoImportar();
     } catch {
       setErro("Erro de conexão. Tente novamente.");
@@ -264,13 +269,13 @@ function ImportarCsv({ clienteId, aoImportar }: { clienteId: string; aoImportar:
         </p>
       </div>
 
-      {erro && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}
+      {erro && <p className="rounded-xl bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400">{erro}</p>}
 
       {resultado && (
-        <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300">
           <p>{resultado.importadas} posição(ões) importada(s) com sucesso.</p>
           {resultado.erros.length > 0 && (
-            <ul className="mt-1 list-disc pl-4 text-xs text-amber-700">
+            <ul className="mt-1 list-disc pl-4 text-xs text-amber-700 dark:text-amber-400">
               {resultado.erros.map((e, i) => (
                 <li key={i}>{e}</li>
               ))}

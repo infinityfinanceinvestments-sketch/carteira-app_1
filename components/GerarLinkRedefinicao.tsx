@@ -10,6 +10,7 @@ export default function GerarLinkRedefinicao({
   nomeCliente: string;
 }) {
   const [link, setLink] = useState<string | null>(null);
+  const [emailEnviado, setEmailEnviado] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
@@ -27,6 +28,7 @@ export default function GerarLinkRedefinicao({
         setErro(data.erro ?? "Não foi possível gerar o link.");
         return;
       }
+      setEmailEnviado(Boolean(data.emailEnviado));
       setLink(`${window.location.origin}/redefinir-senha?token=${data.token}`);
     } catch {
       setErro("Erro de conexão. Tente novamente.");
@@ -49,8 +51,9 @@ export default function GerarLinkRedefinicao({
     <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
       <h2 className="mb-1 text-sm font-semibold text-slate-800 dark:text-slate-100">Redefinir senha</h2>
       <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
-        Gere um link de uso único (válido por 1h) e mande pra {nomeCliente} por fora do
-        app — o app não envia e-mail automaticamente.
+        Gere um link de uso único (válido por 1h). Se o envio automático de e-mail estiver
+        configurado, ele já vai direto pra {nomeCliente} — senão, você recebe o link aqui
+        pra mandar por fora do app (WhatsApp, e-mail pessoal etc.).
       </p>
 
       {!link ? (
@@ -64,6 +67,12 @@ export default function GerarLinkRedefinicao({
         </button>
       ) : (
         <div className="space-y-2">
+          {emailEnviado && (
+            <p className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300">
+              ✓ E-mail enviado automaticamente pra {nomeCliente}. O link abaixo é só um backup,
+              caso precise reenviar por outro canal.
+            </p>
+          )}
           <p className="break-all rounded-xl bg-slate-50 dark:bg-white/5 p-2 text-xs text-slate-600 dark:text-slate-300">{link}</p>
           <div className="flex gap-2">
             <button
@@ -86,7 +95,7 @@ export default function GerarLinkRedefinicao({
       )}
 
       {erro && (
-        <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>
+        <p className="mt-2 rounded-xl bg-red-50 dark:bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">{erro}</p>
       )}
     </section>
   );

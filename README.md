@@ -131,18 +131,57 @@ Classes aceitas: `Renda Fixa`, `Ações`, `Fundos`, `FIIs`, `ETFs`,
 
 ## Variáveis de ambiente
 
-- `AUTH_SECRET` — chave usada para assinar a sessão (JWT). Em produção,
-  defina uma string longa e aleatória; em desenvolvimento local o projeto
-  usa um valor padrão só para não travar o primeiro `npm run dev`.
+Veja `.env.example` para a lista completa com comentários. Resumo:
+
+- `AUTH_SECRET` — chave usada para assinar a sessão (JWT). **Obrigatória em
+  produção** (`next start` / qualquer deploy) — o app se recusa a iniciar
+  sem ela, de propósito, pra nunca ir ao ar com uma chave fraca/previsível.
+  Em desenvolvimento local (`npm run dev`) não precisa configurar nada.
+  Gere uma com:
+  ```
+  node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+  ```
+- `RESEND_API_KEY` — opcional. Só necessária quando o envio automático de
+  e-mail (redefinição de senha / verificação em dois fatores) estiver
+  ativado. Sem ela, continua no modo atual (link manual).
+- `DATABASE_URL` — opcional. Só necessária ao migrar de SQLite pra Postgres.
+
+## Colocando em produção (pra usar com clientes reais)
+
+Hoje o app roda localmente (`npm run dev` / `npm run start`). Pra os
+clientes acessarem de qualquer lugar, ele precisa estar hospedado num
+serviço acessível pela internet, com HTTPS e um domínio. Duas opções que
+funcionam bem com Next.js, sem precisar mexer no código:
+
+1. **[Vercel](https://vercel.com)** — feito pelos criadores do Next.js,
+   é o caminho com menos configuração manual. Plano Pro (~US$20/mês) é o
+   recomendado pra uso comercial (o plano Hobby gratuito é só pra projetos
+   pessoais/não comerciais, pelos termos da própria Vercel).
+2. **[Railway](https://railway.com)** — mais barato pra começar
+   (a partir de ~US$5/mês de uso), também suporta Next.js e Postgres
+   gerenciado no mesmo lugar.
+
+Em qualquer um dos dois, os passos são: conectar o repositório Git,
+configurar as variáveis de ambiente (pelo menos `AUTH_SECRET`) no painel do
+serviço, e apontar um domínio próprio (ex: `infinitytrading.com.br`,
+registrável em [registro.br](https://registro.br), ~R$40/ano).
+
+Enquanto o banco continuar sendo o arquivo `data.db` (SQLite), a hospedagem
+escolhida precisa ter um disco persistente (nem toda hospedagem "serverless"
+tem isso, pois cada execução costuma rodar num ambiente novo/efêmero) — é
+por isso que o passo de migrar pra Postgres abaixo é importante antes de ir
+ao ar de verdade com múltiplos clientes acessando ao mesmo tempo.
 
 ## Próximos passos sugeridos
 
 1. Revisar com jurídico/compliance o texto do disclaimer em
-   `components/Disclaimer.tsx` antes de qualquer uso com clientes reais.
+   `components/Disclaimer.tsx` e da página `/termos` antes de qualquer uso
+   com clientes reais (consultoria de investimento é atividade regulada
+   pela CVM).
 2. Trocar SQLite por Postgres (ou outro banco gerenciado) antes de colocar
-   em produção com mais de um usuário simultâneo.
-3. Avaliar Capacitor/Expo para gerar os apps nativos de iOS/Android a
-   partir desta mesma base.
+   em produção com mais de um usuário simultâneo — ver `DATABASE_URL` acima.
+3. Configurar `RESEND_API_KEY` quando quiser ativar o envio automático de
+   e-mail (redefinição de senha e verificação em dois fatores).
 4. Contratar/negociar acesso a um agregador Open Finance (Belvo, Pluggy) ou
    parcerias diretas com corretoras para a importação automática de
    posições, substituindo o CSV manual.

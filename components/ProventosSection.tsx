@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import ProventosMensalChart from "./ProventosMensalChart";
+import { useToast } from "./Toast";
 
 type TipoProvento = "dividendo" | "jcp" | "rendimento";
 
@@ -121,6 +122,7 @@ export default function ProventosSection({
   posicoes?: { ativo: string }[];
   podeEditar?: boolean;
 }) {
+  const { mostrarToast } = useToast();
   const [proventos, setProventos] = useState(proventosIniciais);
   const [total, setTotal] = useState(totalInicial);
   const [ativo, setAtivo] = useState("");
@@ -254,6 +256,7 @@ export default function ProventosSection({
       setTotal((prev) => prev + valorNumerico);
       setAtivo("");
       setValor("");
+      mostrarToast("Provento lançado!");
     } catch {
       setErro("Erro de conexão. Tente novamente.");
     } finally {
@@ -265,9 +268,11 @@ export default function ProventosSection({
     setProventos((prev) => prev.filter((p) => p.id !== id));
     setTotal((prev) => prev - valorRemovido);
     try {
-      await fetch(`/api/clientes/${clienteId}/proventos/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/clientes/${clienteId}/proventos/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
     } catch {
       // se falhar, o provento volta a aparecer no próximo carregamento da página
+      mostrarToast("Não foi possível remover — tente de novo.", "erro");
     }
   }
 
@@ -276,9 +281,17 @@ export default function ProventosSection({
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Proventos recebidos</h2>
         <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-emerald-700">
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400">
             {formatBRL(filtroLigado ? totalFiltrado : total)}
           </p>
+          {proventos.length > 0 && (
+            <a
+              href={`/api/clientes/${clienteId}/proventos/exportar-csv`}
+              className="shrink-0 rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs font-medium leading-none text-slate-600 dark:text-slate-300"
+            >
+              CSV
+            </a>
+          )}
           <button
             type="button"
             onClick={() => setMenuAberto((v) => !v)}
@@ -397,7 +410,7 @@ export default function ProventosSection({
         </form>
       )}
       {erro && (
-        <p className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>
+        <p className="mb-3 rounded-xl bg-red-50 dark:bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">{erro}</p>
       )}
 
       {proventosFiltrados.length === 0 ? (
@@ -413,7 +426,7 @@ export default function ProventosSection({
               <p className="text-[11px] text-slate-400 dark:text-slate-500">
                 {filtroLigado ? "Total no filtro" : "Total recebido"}
               </p>
-              <p className="mt-0.5 text-sm font-semibold text-emerald-700">
+              <p className="mt-0.5 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
                 {formatBRL(totalFiltrado)}
               </p>
             </div>

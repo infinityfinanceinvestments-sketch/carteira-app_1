@@ -180,6 +180,31 @@ CREATE TABLE IF NOT EXISTS indices_valores_brutos (
   PRIMARY KEY (indicador, data)
 );
 
+-- Verificação em duas etapas (2FA) por e-mail, exigida só no primeiro acesso
+-- de um dispositivo/navegador novo (ver lib/dois-fatores.ts). O código em si
+-- nunca é guardado em texto puro, só o hash — igual senha.
+CREATE TABLE IF NOT EXISTS codigos_verificacao_login (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  codigo_hash TEXT NOT NULL,
+  tentativas INTEGER NOT NULL DEFAULT 0,
+  usado INTEGER NOT NULL DEFAULT 0,
+  expira_em TEXT NOT NULL,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Dispositivos que já passaram pela verificação de código uma vez — o
+-- navegador guarda um cookie de longa duração (180 dias) cujo hash bate com
+-- uma linha aqui, então os próximos logins nesse mesmo navegador pulam o
+-- e-mail de verificação.
+CREATE TABLE IF NOT EXISTS dispositivos_confiaveis (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  ultimo_uso_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Índices nas colunas de chave estrangeira mais consultadas — as tabelas já
 -- nasceram com PRIMARY KEY (indexado automaticamente) e a UNIQUE de
 -- favoritos_mercado (que o SQLite também indexa sozinho), mas nenhuma FK
@@ -200,3 +225,6 @@ CREATE INDEX IF NOT EXISTS idx_notificacoes_cliente_id ON notificacoes(cliente_i
 CREATE INDEX IF NOT EXISTS idx_recomendacoes_cliente_id ON recomendacoes(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_solicitacoes_recomendacao_cliente_id ON solicitacoes_recomendacao(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_objetivos_cliente_id ON objetivos(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_codigos_verificacao_login_usuario_id ON codigos_verificacao_login(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_dispositivos_confiaveis_usuario_id ON dispositivos_confiaveis(usuario_id);
+-- token_hash já é UNIQUE (SQLite indexa automaticamente), não precisa de índice à parte.

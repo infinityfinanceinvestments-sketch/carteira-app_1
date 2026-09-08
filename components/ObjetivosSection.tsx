@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "./Toast";
 
 type TipoObjetivo = "quantidade_ativo" | "valor_livre";
 
@@ -46,6 +47,7 @@ export default function ObjetivosSection({
   objetivosIniciais: Objetivo[];
   podeEditar?: boolean;
 }) {
+  const { mostrarToast } = useToast();
   const [objetivos, setObjetivos] = useState(objetivosIniciais);
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
@@ -132,6 +134,7 @@ export default function ObjetivosSection({
       setMetaQuantidade("");
       setMetaValor("");
       setMostrarForm(false);
+      mostrarToast("Objetivo criado!");
     } catch {
       setErro("Erro de conexão. Tente novamente.");
     } finally {
@@ -179,6 +182,7 @@ export default function ObjetivosSection({
       }
       setObjetivos((prev) => prev.map((o) => (o.id === id ? respData.objetivo : o)));
       setEditandoId(null);
+      mostrarToast("Objetivo atualizado!");
     } catch {
       setErro("Erro de conexão. Tente novamente.");
     } finally {
@@ -191,9 +195,13 @@ export default function ObjetivosSection({
     setObjetivos((prev) => prev.filter((o) => o.id !== id));
     try {
       const res = await fetch(`/api/objetivos/${id}`, { method: "DELETE" });
-      if (!res.ok) setObjetivos(anterior);
+      if (!res.ok) {
+        setObjetivos(anterior);
+        mostrarToast("Não foi possível excluir — tente de novo.", "erro");
+      }
     } catch {
       setObjetivos(anterior);
+      mostrarToast("Erro de conexão. Tente de novo.", "erro");
     }
   }
 
@@ -213,7 +221,7 @@ export default function ObjetivosSection({
       </div>
 
       {erro && (
-        <p className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">{erro}</p>
+        <p className="mb-3 rounded-xl bg-red-50 dark:bg-red-500/10 px-3 py-2 text-xs text-red-700 dark:text-red-400">{erro}</p>
       )}
 
       {mostrarForm && podeEditar && (

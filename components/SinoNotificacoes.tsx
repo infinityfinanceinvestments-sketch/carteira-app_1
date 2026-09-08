@@ -102,7 +102,7 @@ export default function SinoNotificacoes({ clienteId }: { clienteId: number }) {
             ) : (
               <ul className="divide-y divide-slate-100 dark:divide-white/10">
                 {notificacoes.map((n) => (
-                  <li key={n.id} className={`px-3 py-2.5 ${n.lida ? "" : "bg-blue-50/50"}`}>
+                  <li key={n.id} className={`px-3 py-2.5 ${n.lida ? "" : "bg-blue-50/50 dark:bg-blue-500/10"}`}>
                     <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{n.titulo}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">{n.mensagem}</p>
                     <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">

@@ -4,10 +4,23 @@ import type { NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
 
 const COOKIE_NAME = "session";
-const secretString =
-  process.env.AUTH_SECRET ||
-  "dev-only-secret-troque-em-producao-0123456789";
-const secret = new TextEncoder().encode(secretString);
+
+function resolverAuthSecret(): string {
+  if (process.env.AUTH_SECRET) return process.env.AUTH_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    // Em produção (next start / deploy) é obrigatório definir uma chave
+    // real — recusar iniciar aqui é melhor do que assinar sessões de login
+    // com um valor padrão previsível. Veja .env.example.
+    throw new Error(
+      "AUTH_SECRET não está definida. Defina uma chave forte e aleatória nessa variável de ambiente antes de rodar em produção (veja .env.example)."
+    );
+  }
+  // Só em desenvolvimento local (npm run dev): evita exigir configuração
+  // pra simplesmente testar o app.
+  return "dev-only-secret-troque-em-producao-0123456789";
+}
+
+const secret = new TextEncoder().encode(resolverAuthSecret());
 
 export interface SessionPayload {
   userId: number;
@@ -60,6 +73,58 @@ export async function definirCookieSessao(token: string) {
 export async function limparCookieSessao() {
   const store = await cookies();
   store.delete(COOKIE_NAME);
+}
+
+// --- Verificação em duas etapas (2FA) por e-mail no primeiro acesso ---
+// Só usado pelo login web (a checagem de habilitar ou não fica na própria
+// rota de login) — ver lib/repo/dois-fatores.ts pros códigos/dispositivos.
+
+const DEVICE_COOKIE_NAME = "device_trust";
+
+export interface Pending2faPayload {
+  tipo: "2fa_pendente";
+  userId: number;
+}
+
+/** Token de curta duração (10 min) que representa "senha já conferida,
+ *  falta o código do e-mail" — evita que a etapa de verificar código aceite
+ *  um usuarioId arbitrário mandado pelo cliente. */
+export async function criarPending2faToken(userId: number): Promise<string> {
+  return new SignJWT({ tipo: "2fa_pendente", userId })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("10m")
+    .sign(secret);
+}
+
+export async function verificarPending2faToken(token: string): Promise<number | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret);
+    if (payload.tipo !== "2fa_pendente" || typeof payload.userId !== "number") return null;
+    return payload.userId;
+  } catch {
+    return null;
+  }
+}
+
+export async function definirCookieDispositivoConfiavel(token: string, maxAgeSegundos: number) {
+  const store = await cookies();
+  store.set(DEVICE_COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: maxAgeSegundos,
+  });
+}
+
+export async function getCookieDispositivoConfiavel(): Promise<string | undefined> {
+  const store = await cookies();
+  return store.get(DEVICE_COOKIE_NAME)?.value;
+}
+
+export function getCookieDispositivoConfiavelFromRequest(req: NextRequest): string | undefined {
+  return req.cookies.get(DEVICE_COOKIE_NAME)?.value;
 }
 
 export async function getSessao(): Promise<SessionPayload | null> {

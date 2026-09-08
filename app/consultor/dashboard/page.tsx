@@ -82,7 +82,7 @@ export default async function DashboardPage() {
                   <span className="text-sm text-slate-700 dark:text-slate-200">{cliente.nome}</span>
                   <span
                     className={`text-sm font-medium ${
-                      maiorDesvio > 0 ? "text-amber-700" : "text-blue-700"
+                      maiorDesvio > 0 ? "text-amber-700 dark:text-amber-400" : "text-blue-700 dark:text-blue-400"
                     }`}
                   >
                     {maiorDesvio > 0 ? "+" : ""}

@@ -2,6 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "./Toast";
+
+const LABEL_STATUS: Record<string, string> = {
+  aceita: "Recomendação aceita!",
+  recusada: "Recomendação recusada.",
+  executada: "Marcada como executada.",
+  enviada: "Marcada como enviada.",
+  expirada: "Marcada como expirada.",
+};
 
 export default function RecomendacaoAcoes({
   recomendacaoId,
@@ -11,17 +20,25 @@ export default function RecomendacaoAcoes({
   papel: "consultor" | "cliente";
 }) {
   const router = useRouter();
+  const { mostrarToast } = useToast();
   const [carregando, setCarregando] = useState<string | null>(null);
 
   async function mudarStatus(status: string) {
     setCarregando(status);
     try {
-      await fetch(`/api/recomendacoes/${recomendacaoId}`, {
+      const res = await fetch(`/api/recomendacoes/${recomendacaoId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
       });
+      if (!res.ok) {
+        mostrarToast("Não foi possível atualizar — tente de novo.", "erro");
+        return;
+      }
+      mostrarToast(LABEL_STATUS[status] ?? "Atualizado.", "sucesso");
       router.refresh();
+    } catch {
+      mostrarToast("Erro de conexão. Tente de novo.", "erro");
     } finally {
       setCarregando(null);
     }
@@ -40,7 +57,7 @@ export default function RecomendacaoAcoes({
         <button
           onClick={() => mudarStatus("recusada")}
           disabled={carregando !== null}
-          className="rounded-xl bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 disabled:opacity-60"
+          className="rounded-xl bg-red-50 dark:bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-700 dark:text-red-400 disabled:opacity-60"
         >
           {carregando === "recusada" ? "..." : "Recusar"}
         </button>

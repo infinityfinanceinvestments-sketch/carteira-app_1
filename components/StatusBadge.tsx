@@ -1,8 +1,8 @@
 const STATUS_STYLES: Record<string, string> = {
-  pendente: "bg-amber-100 text-amber-800",
-  enviada: "bg-blue-100 text-blue-800",
-  aceita: "bg-emerald-100 text-emerald-800",
-  recusada: "bg-red-100 text-red-800",
+  pendente: "bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300",
+  enviada: "bg-blue-100 dark:bg-blue-500/15 text-blue-800 dark:text-blue-300",
+  aceita: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
+  recusada: "bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300",
   executada: "bg-slate-200 dark:bg-white/15 text-slate-700 dark:text-slate-200",
   expirada: "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400",
 };

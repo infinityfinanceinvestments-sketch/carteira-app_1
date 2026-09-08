@@ -79,7 +79,17 @@ export default async function MinhaCarteiraPage() {
       </section>
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
-        <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">Posições</h2>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Posições</h2>
+          {posicoes.length > 0 && (
+            <a
+              href={`/api/clientes/${cliente.id}/posicoes/exportar-csv`}
+              className="shrink-0 rounded-xl border border-slate-200 dark:border-white/10 px-2.5 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300"
+            >
+              Exportar CSV
+            </a>
+          )}
+        </div>
         {posicoes.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">
             Seu consultor ainda não carregou posições na sua carteira.

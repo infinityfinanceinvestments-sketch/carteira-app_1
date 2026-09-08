@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "./Toast";
 
 export default function LimparRecomendacoesAceitas({
   clienteId,
@@ -11,6 +12,7 @@ export default function LimparRecomendacoesAceitas({
   quantidade: number;
 }) {
   const router = useRouter();
+  const { mostrarToast } = useToast();
   const [carregando, setCarregando] = useState(false);
 
   if (quantidade === 0) return null;
@@ -18,10 +20,17 @@ export default function LimparRecomendacoesAceitas({
   async function limpar() {
     setCarregando(true);
     try {
-      await fetch(`/api/clientes/${clienteId}/recomendacoes/limpar-aceitas`, {
+      const res = await fetch(`/api/clientes/${clienteId}/recomendacoes/limpar-aceitas`, {
         method: "POST",
       });
+      if (!res.ok) {
+        mostrarToast("Não foi possível limpar agora — tente de novo.", "erro");
+        return;
+      }
+      mostrarToast("Recomendações limpas.");
       router.refresh();
+    } catch {
+      mostrarToast("Erro de conexão. Tente de novo.", "erro");
     } finally {
       setCarregando(false);
     }

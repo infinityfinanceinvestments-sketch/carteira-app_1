@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "./Toast";
 
 export default function SolicitarRecomendacao({
   clienteId,
@@ -11,6 +12,7 @@ export default function SolicitarRecomendacao({
   pendente: { criado_em: string; mensagem: string | null } | null;
 }) {
   const router = useRouter();
+  const { mostrarToast } = useToast();
   const [aberto, setAberto] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -52,6 +54,7 @@ export default function SolicitarRecomendacao({
       }
       setMensagem("");
       setAberto(false);
+      mostrarToast("Pedido enviado ao consultor!");
       router.refresh();
     } catch {
       setErro("Erro de conexão. Tente novamente.");

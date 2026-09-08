@@ -5,6 +5,7 @@ import { VERSAO_TERMOS } from "@/lib/termos";
 import BottomNav from "@/components/BottomNav";
 import LogoutButton from "@/components/LogoutButton";
 import ThemeToggle from "@/components/ThemeToggle";
+import PullToRefresh from "@/components/PullToRefresh";
 
 const NAV_ITEMS = [
   { href: "/consultor/dashboard", label: "Início", icon: "🏠" },
@@ -44,7 +45,7 @@ export default async function ConsultorLayout({
         </div>
       </header>
       <main className="mx-auto w-full max-w-md flex-1 px-4 py-5">
-        {children}
+        <PullToRefresh>{children}</PullToRefresh>
       </main>
       <BottomNav items={NAV_ITEMS} />
     </div>
