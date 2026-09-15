@@ -196,12 +196,6 @@ export default function LoginPage() {
             Esqueci minha senha
           </Link>
         </form>
-
-        <div className="mt-6 rounded-3xl bg-white/5 p-4 text-xs text-white/60">
-          <p className="mb-1 font-medium text-white/80">Contas de demonstração</p>
-          <p>Consultor: consultor@carteira.app / consultor123</p>
-          <p>Cliente: ana@carteira.app / cliente123</p>
-        </div>
       </div>
     </main>
   );
