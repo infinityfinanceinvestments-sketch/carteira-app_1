@@ -1,10 +1,18 @@
 import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
 import fs from "node:fs";
+import { bootstrapConsultorInicial } from "./bootstrap";
 
 // Banco SQLite local (arquivo). Em produção, troque por Postgres/MySQL mantendo
 // as mesmas funções de acesso a dados abaixo.
-const DB_PATH = path.join(process.cwd(), "data.db");
+//
+// O caminho é configurável via DB_PATH pra poder apontar pra um disco
+// persistente (ex: volume do Railway montado em /data) — sem isso, hospedar
+// num container normal faria o banco ser apagado a cada novo deploy, já que
+// só a pasta do volume sobrevive entre deploys.
+const DB_PATH = process.env.DB_PATH
+  ? path.resolve(process.env.DB_PATH)
+  : path.join(process.cwd(), "data.db");
 
 declare global {
   var __db: DatabaseSync | undefined;
@@ -12,9 +20,11 @@ declare global {
 
 function getDb(): DatabaseSync {
   if (!global.__db) {
+    fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
     const db = new DatabaseSync(DB_PATH);
     db.exec("PRAGMA foreign_keys = ON;");
     migrate(db);
+    bootstrapConsultorInicial(db);
     global.__db = db;
   }
   return global.__db;

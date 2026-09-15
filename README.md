@@ -145,32 +145,53 @@ Veja `.env.example` para a lista completa com comentários. Resumo:
   e-mail (redefinição de senha / verificação em dois fatores) estiver
   ativado. Sem ela, continua no modo atual (link manual).
 - `DATABASE_URL` — opcional. Só necessária ao migrar de SQLite pra Postgres.
+- `DB_PATH` — opcional. Caminho do arquivo do banco SQLite. Ver seção do
+  Railway abaixo.
+- `CONSULTOR_EMAIL` / `CONSULTOR_SENHA` / `CONSULTOR_NOME` — opcionais, só
+  usadas em produção pra criar a primeira conta de consultor automaticamente.
+  Ver seção do Railway abaixo.
 
 ## Colocando em produção (pra usar com clientes reais)
 
-Hoje o app roda localmente (`npm run dev` / `npm run start`). Pra os
-clientes acessarem de qualquer lugar, ele precisa estar hospedado num
-serviço acessível pela internet, com HTTPS e um domínio. Duas opções que
-funcionam bem com Next.js, sem precisar mexer no código:
+O app está pronto pra ir ao ar no **[Railway](https://railway.com)** — foi
+a hospedagem escolhida porque, diferente de planos de hospedagem
+"compartilhada"/serverless comuns (inclusive planos baratos como os da
+Hostinger fora do VPS), ele mantém um servidor Node.js rodando de verdade
+com disco persistente, que é exatamente o que o banco SQLite deste projeto
+precisa — sem isso, o banco seria apagado a cada novo deploy. Já existe um
+`railway.json` no projeto com a configuração de build/start.
 
-1. **[Vercel](https://vercel.com)** — feito pelos criadores do Next.js,
-   é o caminho com menos configuração manual. Plano Pro (~US$20/mês) é o
-   recomendado pra uso comercial (o plano Hobby gratuito é só pra projetos
-   pessoais/não comerciais, pelos termos da própria Vercel).
-2. **[Railway](https://railway.com)** — mais barato pra começar
-   (a partir de ~US$5/mês de uso), também suporta Next.js e Postgres
-   gerenciado no mesmo lugar.
+Passo a passo:
 
-Em qualquer um dos dois, os passos são: conectar o repositório Git,
-configurar as variáveis de ambiente (pelo menos `AUTH_SECRET`) no painel do
-serviço, e apontar um domínio próprio (ex: `infinitytrading.com.br`,
-registrável em [registro.br](https://registro.br), ~R$40/ano).
+1. **Criar o projeto no Railway**: conecte o repositório Git deste projeto
+   pelo [railway.com](https://railway.com) ("New Project" → "Deploy from
+   GitHub repo"). Ele detecta automaticamente que é um projeto Next.js.
+2. **Criar um volume persistente**: no serviço, aba "Volumes" → criar um
+   volume e montá-lo em `/data` (por exemplo). É nele que o arquivo do
+   banco vai morar, sobrevivendo a cada novo deploy.
+3. **Configurar as variáveis de ambiente** (aba "Variables" do serviço):
+   - `AUTH_SECRET` — gere uma com o comando indicado acima e cole aqui.
+     **Use uma chave diferente da que você usa em desenvolvimento local.**
+   - `DB_PATH` = `/data/data.db` (ou o caminho que você escolheu no passo 2).
+   - `CONSULTOR_EMAIL`, `CONSULTOR_SENHA`, `CONSULTOR_NOME` — os dados da
+     sua conta real de consultor (não as credenciais de demonstração). O
+     app cria essa conta sozinho na primeira vez que subir com o banco
+     vazio — depois disso pode até apagar essas três variáveis, não fazem
+     mais nada.
+   - `RESEND_API_KEY` — opcional, se já tiver configurado o envio automático
+     de e-mail.
+4. **Deploy**: o Railway builda (`npm run build`) e sobe (`npm run start`)
+   sozinho a cada push. Na primeira vez, acesse a URL que o Railway gera
+   (algo como `infinity-trading.up.railway.app`) e faça login com o
+   `CONSULTOR_EMAIL`/`CONSULTOR_SENHA` que você configurou.
+5. **Domínio próprio** (opcional, mas recomendado pra passar credibilidade
+   pros clientes): registre um domínio (ex: `infinitytrading.com.br`, em
+   [registro.br](https://registro.br), ~R$40/ano) e aponte pra esse serviço
+   na aba "Settings" → "Networking" → "Custom Domain" do Railway.
 
-Enquanto o banco continuar sendo o arquivo `data.db` (SQLite), a hospedagem
-escolhida precisa ter um disco persistente (nem toda hospedagem "serverless"
-tem isso, pois cada execução costuma rodar num ambiente novo/efêmero) — é
-por isso que o passo de migrar pra Postgres abaixo é importante antes de ir
-ao ar de verdade com múltiplos clientes acessando ao mesmo tempo.
+**Importante**: o `npm run db:seed` (que cria as contas de demonstração)
+**nunca deve ser rodado em produção** — ele apaga o banco existente antes de
+recriar do zero. Ele é só pra ambiente de desenvolvimento/teste.
 
 ## Próximos passos sugeridos
 
