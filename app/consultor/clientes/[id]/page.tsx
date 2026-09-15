@@ -27,6 +27,8 @@ import LimparRecomendacoesAceitas from "@/components/LimparRecomendacoesAceitas"
 import ModeloSelector from "@/components/ModeloSelector";
 import GerarLinkRedefinicao from "@/components/GerarLinkRedefinicao";
 import ProventosSection from "@/components/ProventosSection";
+import AreaEmConstrucao from "@/components/AreaEmConstrucao";
+import { PROVENTOS_HABILITADO } from "@/lib/feature-flags";
 import ObjetivosSection from "@/components/ObjetivosSection";
 import { formatDataHoraBr } from "@/lib/formatacao";
 
@@ -62,9 +64,12 @@ export default async function ClienteDetalhePage({
   const auditoria = listarAuditoriaDoCliente(clienteId);
   // Fire-and-forget: não trava o carregamento da página esperando as
   // chamadas na Yahoo Finance terminarem (best effort, ver lib/proventos-auto.ts).
-  sincronizarProventosAutomaticos(clienteId, posicoes).catch((erro) => {
-    console.error("Erro sincronizando proventos automáticos", erro);
-  });
+  // Só roda se a área de Proventos estiver ligada (ver lib/feature-flags.ts).
+  if (PROVENTOS_HABILITADO) {
+    sincronizarProventosAutomaticos(clienteId, posicoes).catch((erro) => {
+      console.error("Erro sincronizando proventos automáticos", erro);
+    });
+  }
   const proventos = listarProventosDoCliente(clienteId);
   const totalProventos = totalProventosDoCliente(clienteId);
   const objetivos = listarObjetivosComProgresso(clienteId);
@@ -234,13 +239,17 @@ export default async function ClienteDetalhePage({
         </ul>
       </section>
 
-      <ProventosSection
-        clienteId={clienteId}
-        proventosIniciais={proventos}
-        totalInicial={totalProventos}
-        posicoes={posicoes}
-        podeEditar
-      />
+      {PROVENTOS_HABILITADO ? (
+        <ProventosSection
+          clienteId={clienteId}
+          proventosIniciais={proventos}
+          totalInicial={totalProventos}
+          posicoes={posicoes}
+          podeEditar
+        />
+      ) : (
+        <AreaEmConstrucao titulo="Proventos" icone="💰" />
+      )}
 
       <ObjetivosSection clienteId={clienteId} objetivosIniciais={objetivos} podeEditar />
 
