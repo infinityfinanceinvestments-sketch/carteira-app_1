@@ -8,7 +8,7 @@ import {
   definirCookieSessao,
   definirCookieDispositivoConfiavel,
 } from "@/lib/auth";
-import { identificarOrigem, registrarFalha, verificarLimite } from "@/lib/rate-limit";
+import { identificarOrigem, registrarFalha, verificarLimite, limiteDeLoginAtivo } from "@/lib/rate-limit";
 
 const schema = z.object({
   pendingToken: z.string().min(1),
@@ -29,16 +29,18 @@ const MENSAGEM_POR_MOTIVO: Record<string, string> = {
 export async function POST(req: NextRequest) {
   const origem = identificarOrigem(req);
   const chaveLimite = `2fa:${origem}`;
-  const limite = verificarLimite(chaveLimite, MAX_TENTATIVAS, JANELA_LIMITE_MS);
-  if (!limite.permitido) {
-    return NextResponse.json(
-      {
-        erro: `Muitas tentativas. Tente novamente em ${Math.ceil(
-          limite.retryApósSegundos / 60
-        )} min.`,
-      },
-      { status: 429, headers: { "Retry-After": String(limite.retryApósSegundos) } }
-    );
+  if (limiteDeLoginAtivo()) {
+    const limite = verificarLimite(chaveLimite, MAX_TENTATIVAS, JANELA_LIMITE_MS);
+    if (!limite.permitido) {
+      return NextResponse.json(
+        {
+          erro: `Muitas tentativas. Tente novamente em ${Math.ceil(
+            limite.retryApósSegundos / 60
+          )} min.`,
+        },
+        { status: 429, headers: { "Retry-After": String(limite.retryApósSegundos) } }
+      );
+    }
   }
 
   const body = await req.json().catch(() => null);
@@ -57,7 +59,7 @@ export async function POST(req: NextRequest) {
 
   const resultado = verificarCodigoVerificacao(userId, parsed.data.codigo);
   if (!resultado.ok) {
-    registrarFalha(chaveLimite, JANELA_LIMITE_MS);
+    if (limiteDeLoginAtivo()) registrarFalha(chaveLimite, JANELA_LIMITE_MS);
     return NextResponse.json(
       { erro: MENSAGEM_POR_MOTIVO[resultado.motivo] ?? "Código incorreto." },
       { status: 401 }

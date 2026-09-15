@@ -11,7 +11,7 @@ import {
   criarPending2faToken,
   getCookieDispositivoConfiavelFromRequest,
 } from "@/lib/auth";
-import { identificarOrigem, registrarFalha, verificarLimite } from "@/lib/rate-limit";
+import { identificarOrigem, registrarFalha, verificarLimite, limiteDeLoginAtivo } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -27,16 +27,18 @@ const MAX_TENTATIVAS = 8;
 export async function POST(req: NextRequest) {
   const origem = identificarOrigem(req);
   const chaveLimite = `login:${origem}`;
-  const limite = verificarLimite(chaveLimite, MAX_TENTATIVAS, JANELA_LIMITE_MS);
-  if (!limite.permitido) {
-    return NextResponse.json(
-      {
-        erro: `Muitas tentativas de login. Tente novamente em ${Math.ceil(
-          limite.retryApósSegundos / 60
-        )} min.`,
-      },
-      { status: 429, headers: { "Retry-After": String(limite.retryApósSegundos) } }
-    );
+  if (limiteDeLoginAtivo()) {
+    const limite = verificarLimite(chaveLimite, MAX_TENTATIVAS, JANELA_LIMITE_MS);
+    if (!limite.permitido) {
+      return NextResponse.json(
+        {
+          erro: `Muitas tentativas de login. Tente novamente em ${Math.ceil(
+            limite.retryApósSegundos / 60
+          )} min.`,
+        },
+        { status: 429, headers: { "Retry-After": String(limite.retryApósSegundos) } }
+      );
+    }
   }
 
   const body = await req.json().catch(() => null);
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest) {
   const { email, senha, aceita2fa } = parsed.data;
   const usuario = getUsuarioPorEmail(email.toLowerCase());
   if (!usuario) {
-    registrarFalha(chaveLimite, JANELA_LIMITE_MS);
+    if (limiteDeLoginAtivo()) registrarFalha(chaveLimite, JANELA_LIMITE_MS);
     return NextResponse.json(
       { erro: "E-mail ou senha incorretos." },
       { status: 401 }
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
 
   const senhaOk = await verificarSenha(senha, usuario.senha_hash);
   if (!senhaOk) {
-    registrarFalha(chaveLimite, JANELA_LIMITE_MS);
+    if (limiteDeLoginAtivo()) registrarFalha(chaveLimite, JANELA_LIMITE_MS);
     return NextResponse.json(
       { erro: "E-mail ou senha incorretos." },
       { status: 401 }

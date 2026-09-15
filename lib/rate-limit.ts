@@ -36,6 +36,15 @@ function balderAtivo(chave: string, janelaMs: number): Balde | undefined {
   return balde;
 }
 
+// Liga/desliga a trava de tentativas de login/2FA sem precisar mexer no
+// código toda vez — desativada por padrão (foi desligada a pedido, pra
+// facilitar testes de login em produção). Pra reativar, basta adicionar
+// LOGIN_RATE_LIMIT_ATIVO=true nas variáveis de ambiente do Railway (o
+// deploy pega a mudança sozinho, sem precisar de um novo commit).
+export function limiteDeLoginAtivo(): boolean {
+  return process.env.LOGIN_RATE_LIMIT_ATIVO === "true";
+}
+
 export interface ResultadoLimite {
   permitido: boolean;
   /** Segundos até poder tentar de novo — só relevante quando `permitido` é false. */
