@@ -14,10 +14,12 @@ import {
   totalProventosDoCliente,
   valorTotalCarteira,
   listarObjetivosComProgresso,
+  listarPontosIntradayDeHoje,
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
 import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
 import { atualizarPrecosDeMercado } from "@/lib/cotacoes";
+import { registrarSnapshotIntraday } from "@/lib/intraday";
 import { sincronizarProventosAutomaticos } from "@/lib/proventos-auto";
 import AllocationDonut from "@/components/AllocationDonut";
 import DeviationChart from "@/components/DeviationChart";
@@ -94,7 +96,9 @@ export default async function ClienteDetalhePage({
   const objetivos = listarObjetivosComProgresso(clienteId);
 
   garantirSnapshotDeHoje(clienteId, total);
+  registrarSnapshotIntraday(clienteId, total);
   const historico = await obterHistoricoComBenchmark(clienteId, cliente.benchmark);
+  const intraday = listarPontosIntradayDeHoje(clienteId);
 
   return (
     <div className="space-y-5">
@@ -143,7 +147,7 @@ export default async function ClienteDetalhePage({
         <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
           Evolução patrimonial
         </h2>
-        <EvolutionChart dados={historico} benchmarkLabel={cliente.benchmark} />
+        <EvolutionChart dados={historico} intraday={intraday} benchmarkLabel={cliente.benchmark} />
       </section>
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">

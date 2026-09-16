@@ -66,6 +66,19 @@ CREATE TABLE IF NOT EXISTS historico_patrimonio (
   valor_benchmark REAL
 );
 
+-- Pontos intraday do patrimônio — diferente de historico_patrimonio (que
+-- guarda só 1 ponto por DIA, sobrescrito a cada abertura), essa tabela
+-- ACUMULA um ponto a cada abertura de carteira (com throttle, ver
+-- lib/intraday.ts) — é o que alimenta o filtro "1D" do gráfico de evolução
+-- com uma visão dentro do próprio dia. Só guarda pontos recentes: linhas de
+-- dias anteriores são limpas automaticamente (ver limparIntradayAntigo).
+CREATE TABLE IF NOT EXISTS historico_intraday (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  momento TEXT NOT NULL DEFAULT (datetime('now')),
+  valor_total REAL NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS favoritos_mercado (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
@@ -221,6 +234,7 @@ CREATE INDEX IF NOT EXISTS idx_clientes_consultor_id ON clientes(consultor_id);
 CREATE INDEX IF NOT EXISTS idx_contas_cliente_id ON contas(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_posicoes_conta_id ON posicoes(conta_id);
 CREATE INDEX IF NOT EXISTS idx_historico_patrimonio_cliente_id ON historico_patrimonio(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_historico_intraday_cliente_momento ON historico_intraday(cliente_id, momento);
 CREATE INDEX IF NOT EXISTS idx_termos_aceites_usuario_id ON termos_aceites(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_tokens_redefinicao_senha_usuario_id ON tokens_redefinicao_senha(usuario_id);
 -- token já é UNIQUE (SQLite indexa automaticamente), não precisa de índice à parte.

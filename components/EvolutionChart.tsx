@@ -10,11 +10,20 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { formatHoraBr } from "@/lib/formatacao";
 
 export interface PontoEvolucao {
   data: string;
   valor_total: number;
   valor_benchmark: number | null;
+}
+
+// Ponto intraday (ver lib/intraday.ts) — só existe pro filtro "1D": um
+// ponto por abertura de carteira ao longo do dia, sem resolução de
+// benchmark (os índices de mercado só têm fechamento diário, não intraday).
+export interface PontoIntraday {
+  momento: string;
+  valor_total: number;
 }
 
 const formatBRLCompact = (v: number) =>
@@ -88,23 +97,36 @@ function filtrarPorPeriodo(dados: PontoEvolucao[], dias: number | null): PontoEv
 
 export default function EvolutionChart({
   dados,
+  intraday,
   benchmarkLabel,
 }: {
   dados: PontoEvolucao[];
+  /** Pontos de hoje pro filtro "1D" (ver lib/intraday.ts). Opcional — sem
+   *  isso, "1D" só mostra a mensagem de "sem pontos suficientes". */
+  intraday?: PontoIntraday[];
   benchmarkLabel?: string;
 }) {
   const [periodo, setPeriodo] = useState<Periodo>("tudo");
+  const eIntraday = periodo === "1d";
 
   const dadosFiltrados = useMemo(() => {
+    if (eIntraday) return [];
     const opcao = OPCOES_PERIODO.find((o) => o.valor === periodo);
     return filtrarPorPeriodo(dados, opcao?.dias ?? null);
-  }, [dados, periodo]);
+  }, [dados, periodo, eIntraday]);
 
-  const usarDiaMes = periodo === "1d" || periodo === "7d" || periodo === "30d";
-  const formatado = dadosFiltrados.map((d) => ({
-    ...d,
-    label: usarDiaMes ? formatDiaMes(d.data) : formatMesAno(d.data),
-  }));
+  const usarDiaMes = periodo === "7d" || periodo === "30d";
+  const formatado = eIntraday
+    ? (intraday ?? []).map((p) => ({
+        data: p.momento,
+        valor_total: p.valor_total,
+        valor_benchmark: null as number | null,
+        label: formatHoraBr(p.momento),
+      }))
+    : dadosFiltrados.map((d) => ({
+        ...d,
+        label: usarDiaMes ? formatDiaMes(d.data) : formatMesAno(d.data),
+      }));
 
   return (
     <div className="w-full">
@@ -125,13 +147,15 @@ export default function EvolutionChart({
         ))}
       </div>
 
-      {dados.length < 2 ? (
+      {!eIntraday && dados.length < 2 ? (
         <div className="flex h-56 items-center justify-center text-sm text-slate-400 dark:text-slate-500">
           Histórico insuficiente para exibir a evolução.
         </div>
       ) : formatado.length < 2 ? (
-        <div className="flex h-56 items-center justify-center text-sm text-slate-400 dark:text-slate-500">
-          Sem pontos suficientes nesse período.
+        <div className="flex h-56 items-center justify-center px-4 text-center text-sm text-slate-400 dark:text-slate-500">
+          {eIntraday
+            ? "Ainda não há pontos suficientes hoje — abra a carteira de novo mais tarde pra acumular mais um ponto."
+            : "Sem pontos suficientes nesse período."}
         </div>
       ) : (
         <div className="h-56 w-full">

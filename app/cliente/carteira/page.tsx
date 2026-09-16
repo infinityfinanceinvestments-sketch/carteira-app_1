@@ -6,10 +6,12 @@ import {
   consolidarPosicoes,
   alocacaoPorClasse,
   valorTotalCarteira,
+  listarPontosIntradayDeHoje,
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
 import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
 import { atualizarPrecosDeMercado } from "@/lib/cotacoes";
+import { registrarSnapshotIntraday } from "@/lib/intraday";
 import AllocationDonut from "@/components/AllocationDonut";
 import EvolutionChart from "@/components/EvolutionChart";
 
@@ -43,7 +45,9 @@ export default async function MinhaCarteiraPage() {
   const total = valorTotalCarteira(cliente.id);
 
   garantirSnapshotDeHoje(cliente.id, total);
+  registrarSnapshotIntraday(cliente.id, total);
   const historico = await obterHistoricoComBenchmark(cliente.id, cliente.benchmark);
+  const intraday = listarPontosIntradayDeHoje(cliente.id);
 
   const primeiro = historico[0]?.valor_total ?? total;
   const variacao = primeiro > 0 ? ((total - primeiro) / primeiro) * 100 : 0;
@@ -86,7 +90,7 @@ export default async function MinhaCarteiraPage() {
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
         <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">Evolução</h2>
-        <EvolutionChart dados={historico} benchmarkLabel={cliente.benchmark} />
+        <EvolutionChart dados={historico} intraday={intraday} benchmarkLabel={cliente.benchmark} />
       </section>
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">

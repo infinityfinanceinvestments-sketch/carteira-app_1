@@ -94,6 +94,16 @@ export interface HistoricoPatrimonio {
   valor_benchmark: number | null;
 }
 
+// Ponto intraday do patrimônio (ver lib/intraday.ts e historico_intraday no
+// schema) — `momento` vem no formato "YYYY-MM-DD HH:MM:SS" do
+// datetime('now') do SQLite (UTC, sem indicar fuso).
+export interface PontoIntraday {
+  id: number;
+  cliente_id: number;
+  momento: string;
+  valor_total: number;
+}
+
 export interface TermoAceite {
   id: number;
   usuario_id: number;
