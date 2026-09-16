@@ -3,6 +3,7 @@ import {
   listarClientes,
   valorTotalCarteira,
   listarTodasRecomendacoesPendentes,
+  listarTodasMovimentacoesPendentes,
   desvioVsCarteiraModelo,
 } from "@/lib/repo";
 import StatusBadge from "@/components/StatusBadge";
@@ -18,6 +19,7 @@ export default async function DashboardPage() {
   }));
   const patrimonioTotal = patrimonios.reduce((acc, p) => acc + p.total, 0);
   const pendentes = listarTodasRecomendacoesPendentes();
+  const movimentacoesPendentes = listarTodasMovimentacoesPendentes();
 
   const desvios = clientes
     .map((c) => {
@@ -58,14 +60,52 @@ export default async function DashboardPage() {
             {pendentes.length}
           </p>
         </div>
-        <Link
-          href="/consultor/clientes/novo"
-          className="btn-accent flex flex-col justify-center rounded-3xl p-4 text-white"
-        >
-          <p className="text-sm font-semibold">+ Novo cliente</p>
-          <p className="text-xs text-white/70">Cadastrar agora</p>
-        </Link>
+        <div className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
+          <p className="text-xs text-slate-500 dark:text-slate-400">Aportes/retiradas a validar</p>
+          <p className="mt-1 text-lg font-semibold text-black dark:text-white">
+            {movimentacoesPendentes.length}
+          </p>
+        </div>
       </div>
+
+      <Link
+        href="/consultor/clientes/novo"
+        className="btn-accent flex flex-col justify-center rounded-3xl p-4 text-white"
+      >
+        <p className="text-sm font-semibold">+ Novo cliente</p>
+        <p className="text-xs text-white/70">Cadastrar agora</p>
+      </Link>
+
+      {movimentacoesPendentes.length > 0 && (
+        <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-amber-200 dark:ring-amber-500/30">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+              🔔 Aportes/retiradas aguardando validação
+            </h2>
+            <span className="text-xs text-slate-400 dark:text-slate-500">
+              {movimentacoesPendentes.length}
+            </span>
+          </div>
+          <ul className="space-y-2">
+            {movimentacoesPendentes.slice(0, 6).map((m) => (
+              <li key={m.id}>
+                <Link
+                  href={`/consultor/clientes/${m.cliente_id}`}
+                  className="flex items-center justify-between rounded-xl px-2 py-1.5 hover:bg-slate-50 dark:hover:bg-white/5"
+                >
+                  <span className="text-sm text-slate-700 dark:text-slate-200">
+                    {m.cliente_nome} · {m.tipo === "aporte" ? "Aporte" : "Retirada"} em{" "}
+                    {m.ativo}
+                  </span>
+                  <span className="text-sm font-medium text-black dark:text-white">
+                    {formatBRL(m.valor)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {desvios.length > 0 && (
         <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">

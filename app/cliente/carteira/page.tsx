@@ -7,6 +7,7 @@ import {
   alocacaoPorClasse,
   valorTotalCarteira,
   listarPontosIntradayDeHoje,
+  listarMovimentacoesDoCliente,
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
 import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
@@ -14,6 +15,7 @@ import { atualizarPrecosDeMercado } from "@/lib/cotacoes";
 import { registrarSnapshotIntraday } from "@/lib/intraday";
 import AllocationDonut from "@/components/AllocationDonut";
 import EvolutionChart from "@/components/EvolutionChart";
+import InformarMovimentacao from "@/components/InformarMovimentacao";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -48,6 +50,7 @@ export default async function MinhaCarteiraPage() {
   registrarSnapshotIntraday(cliente.id, total);
   const historico = await obterHistoricoComBenchmark(cliente.id, cliente.benchmark);
   const intraday = listarPontosIntradayDeHoje(cliente.id);
+  const movimentacoes = listarMovimentacoesDoCliente(cliente.id);
 
   const primeiro = historico[0]?.valor_total ?? total;
   const variacao = primeiro > 0 ? ((total - primeiro) / primeiro) * 100 : 0;
@@ -143,6 +146,12 @@ export default async function MinhaCarteiraPage() {
           </div>
         )}
       </section>
+
+      <InformarMovimentacao
+        clienteId={cliente.id}
+        posicoes={posicoes.map((p) => ({ id: p.id, ativo: p.ativo, classe: p.classe }))}
+        movimentacoes={movimentacoes}
+      />
     </div>
   );
 }

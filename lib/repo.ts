@@ -13,6 +13,7 @@ export * from "./repo/carteiras-modelo";
 export * from "./repo/historico";
 export * from "./repo/recomendacoes";
 export * from "./repo/solicitacoes-recomendacao";
+export * from "./repo/movimentacoes";
 export * from "./repo/agregacoes";
 export * from "./repo/termos";
 export * from "./repo/redefinicao-senha";

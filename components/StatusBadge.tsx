@@ -5,6 +5,7 @@ const STATUS_STYLES: Record<string, string> = {
   recusada: "bg-red-100 dark:bg-red-500/15 text-red-800 dark:text-red-300",
   executada: "bg-slate-200 dark:bg-white/15 text-slate-700 dark:text-slate-200",
   expirada: "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400",
+  aprovada: "bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -14,6 +15,7 @@ const STATUS_LABELS: Record<string, string> = {
   recusada: "Recusada",
   executada: "Executada",
   expirada: "Expirada",
+  aprovada: "Aprovada",
 };
 
 export default function StatusBadge({ status }: { status: string }) {

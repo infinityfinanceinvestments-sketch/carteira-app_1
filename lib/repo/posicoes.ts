@@ -1,5 +1,6 @@
-import getDb, { plainRows } from "../db";
+import getDb, { plainRow, plainRows } from "../db";
 import type { Conta, Posicao } from "../types";
+import { calcularAporteEmPosicao, calcularRetiradaEmPosicao } from "../movimentacoes";
 
 // ---------- Contas ----------
 
@@ -46,6 +47,32 @@ export function listarPosicoesDaConta(contaId: number): Posicao[] {
   const db = getDb();
   return plainRows(
     db.prepare("SELECT * FROM posicoes WHERE conta_id = ?").all(contaId) as unknown as Posicao[]
+  );
+}
+
+export function getPosicaoPorId(id: number): Posicao | undefined {
+  const db = getDb();
+  return plainRow(
+    db.prepare("SELECT * FROM posicoes WHERE id = ?").get(id) as Posicao | undefined
+  );
+}
+
+/** Mesma coisa que `getPosicaoPorId`, mas já traz o `cliente_id` dono da
+ *  posição (via join com `contas`) — usado pra validar que um
+ *  `posicao_id` informado numa movimentação (ver lib/repo/movimentacoes.ts)
+ *  realmente pertence ao cliente que está pedindo, e não a outro. */
+export function getPosicaoComCliente(
+  id: number
+): (Posicao & { cliente_id: number }) | undefined {
+  const db = getDb();
+  return plainRow(
+    db
+      .prepare(
+        `SELECT p.*, c.cliente_id as cliente_id
+         FROM posicoes p JOIN contas c ON c.id = p.conta_id
+         WHERE p.id = ?`
+      )
+      .get(id) as (Posicao & { cliente_id: number }) | undefined
   );
 }
 
@@ -156,6 +183,48 @@ export function atualizarValorAtualPosicao(id: number, valorAtual: number): void
  *  mexe em `atualizado_em`: a data-base do próximo cálculo continua sendo a
  *  última vez que o valor foi de fato atualizado (importação, lançamento
  *  manual, ou um incremento anterior do CDI). */
+/** Aplica um aporte (informado pelo cliente e aprovado pelo consultor — ver
+ *  lib/repo/movimentacoes.ts) a uma posição existente. A conta feita é a
+ *  mesma de `calcularAporteEmPosicao` (lib/movimentacoes.ts); esta função só
+ *  lê o estado atual do banco e grava o resultado. */
+export function aplicarAporteEmPosicao(
+  id: number,
+  valor: number,
+  quantidadeAdicional: number | null
+): void {
+  const db = getDb();
+  const posicao = getPosicaoPorId(id);
+  if (!posicao) throw new Error("Posição não encontrada.");
+  const novo = calcularAporteEmPosicao(posicao, valor, quantidadeAdicional);
+  db.prepare(
+    `UPDATE posicoes SET quantidade = ?, preco_medio = ?, valor_atual = ?, atualizado_em = datetime('now') WHERE id = ?`
+  ).run(novo.quantidade, novo.preco_medio, novo.valor_atual, id);
+}
+
+/** Aplica uma retirada (informada pelo cliente e aprovada pelo consultor —
+ *  ver lib/repo/movimentacoes.ts) a uma posição existente. Quando a
+ *  retirada zera a posição (por valor ou por quantidade — ver
+ *  `calcularRetiradaEmPosicao`), a linha é apagada em vez de deixar uma
+ *  posição zerada na carteira. Devolve se a posição foi removida. */
+export function aplicarRetiradaEmPosicao(
+  id: number,
+  valor: number,
+  quantidadeRetirada: number | null
+): { removida: boolean } {
+  const db = getDb();
+  const posicao = getPosicaoPorId(id);
+  if (!posicao) throw new Error("Posição não encontrada.");
+  const novo = calcularRetiradaEmPosicao(posicao, valor, quantidadeRetirada);
+  if (novo.removida) {
+    db.prepare("DELETE FROM posicoes WHERE id = ?").run(id);
+  } else {
+    db.prepare(
+      `UPDATE posicoes SET quantidade = ?, preco_medio = ?, valor_atual = ?, atualizado_em = datetime('now') WHERE id = ?`
+    ).run(novo.quantidade, novo.preco_medio, novo.valor_atual, id);
+  }
+  return { removida: novo.removida };
+}
+
 export function atualizarIndexadorPosicao(
   id: number,
   indexador: string | null,

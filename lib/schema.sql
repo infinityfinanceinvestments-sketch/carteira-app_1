@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS proventos (
 CREATE TABLE IF NOT EXISTS notificacoes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
-  tipo TEXT NOT NULL CHECK (tipo IN ('recomendacao','variacao_preco','desvio_modelo','objetivo_concluido')),
+  tipo TEXT NOT NULL CHECK (tipo IN ('recomendacao','variacao_preco','desvio_modelo','objetivo_concluido','movimentacao')),
   titulo TEXT NOT NULL,
   mensagem TEXT NOT NULL,
   referencia_id INTEGER,
@@ -161,6 +161,38 @@ CREATE TABLE IF NOT EXISTS solicitacoes_recomendacao (
   status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente','atendida')),
   criado_em TEXT NOT NULL DEFAULT (datetime('now')),
   atendida_em TEXT
+);
+
+-- Pedido do cliente de lançar um aporte ou retirada na própria carteira —
+-- como ainda não há integração automática com corretoras, é assim que o
+-- cliente informa uma movimentação real que fez. Fica 'pendente' até o
+-- consultor validar (ver POST/PATCH em
+-- app/api/clientes/[id]/movimentacoes) — só quando aprovada é que
+-- `posicoes` é de fato alterada (ver aplicarAporteEmPosicao/
+-- aplicarRetiradaEmPosicao em lib/repo/posicoes.ts).
+-- `posicao_id`: preenchido quando o cliente escolhe "ativo que já tenho" —
+--   NULL só é permitido em aportes de ativo novo (retirada sempre precisa
+--   de uma posição existente pra sacar). Guardamos `ativo`/`classe` em
+--   colunas próprias (em vez de só o FK) pra manter o registro legível
+--   mesmo se a posição for consolidada/renomeada/removida depois.
+-- `quantidade`: opcional — obrigatória só faz sentido informar pra ativos
+--   com unidade clara (ações, FIIs, ETFs); pra Renda Fixa o cliente
+--   normalmente só sabe o valor em R$, então fica NULL e o valor é tratado
+--   como um ajuste direto no custo/valor da posição.
+CREATE TABLE IF NOT EXISTS movimentacoes_pendentes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL CHECK (tipo IN ('aporte','retirada')),
+  posicao_id INTEGER REFERENCES posicoes(id) ON DELETE SET NULL,
+  ativo TEXT NOT NULL,
+  classe TEXT NOT NULL,
+  quantidade REAL,
+  valor REAL NOT NULL,
+  observacao TEXT,
+  status TEXT NOT NULL DEFAULT 'pendente' CHECK (status IN ('pendente','aprovada','recusada')),
+  nota_consultor TEXT,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  respondida_em TEXT
 );
 
 -- Metas gameficadas que o consultor traça junto com o cliente (ex: "acumular
@@ -245,6 +277,9 @@ CREATE INDEX IF NOT EXISTS idx_proventos_cliente_id ON proventos(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_notificacoes_cliente_id ON notificacoes(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_recomendacoes_cliente_id ON recomendacoes(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_solicitacoes_recomendacao_cliente_id ON solicitacoes_recomendacao(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_movimentacoes_pendentes_cliente_id ON movimentacoes_pendentes(cliente_id);
+CREATE INDEX IF NOT EXISTS idx_movimentacoes_pendentes_status ON movimentacoes_pendentes(status);
+CREATE INDEX IF NOT EXISTS idx_movimentacoes_pendentes_posicao_id ON movimentacoes_pendentes(posicao_id);
 CREATE INDEX IF NOT EXISTS idx_objetivos_cliente_id ON objetivos(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_codigos_verificacao_login_usuario_id ON codigos_verificacao_login(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_dispositivos_confiaveis_usuario_id ON dispositivos_confiaveis(usuario_id);

@@ -145,7 +145,8 @@ export type TipoNotificacao =
   | "recomendacao"
   | "variacao_preco"
   | "desvio_modelo"
-  | "objetivo_concluido";
+  | "objetivo_concluido"
+  | "movimentacao";
 export interface Notificacao {
   id: number;
   cliente_id: number;
@@ -210,4 +211,26 @@ export interface ObjetivoComProgresso extends Objetivo {
   meta: number;
   progressoPercentual: number;
   concluido: boolean;
+}
+
+// Pedido do cliente de informar um aporte ou retirada — ver
+// movimentacoes_pendentes no schema e lib/repo/movimentacoes.ts.
+export type TipoMovimentacao = "aporte" | "retirada";
+export type StatusMovimentacao = "pendente" | "aprovada" | "recusada";
+export interface MovimentacaoPendente {
+  id: number;
+  cliente_id: number;
+  tipo: TipoMovimentacao;
+  // NULL só em aporte de ativo novo — retirada sempre referencia uma
+  // posição existente.
+  posicao_id: number | null;
+  ativo: string;
+  classe: string;
+  quantidade: number | null;
+  valor: number;
+  observacao: string | null;
+  status: StatusMovimentacao;
+  nota_consultor: string | null;
+  criado_em: string;
+  respondida_em: string | null;
 }

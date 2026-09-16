@@ -15,6 +15,7 @@ import {
   valorTotalCarteira,
   listarObjetivosComProgresso,
   listarPontosIntradayDeHoje,
+  listarMovimentacoesDoCliente,
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
 import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
@@ -36,6 +37,7 @@ import ProventosSection from "@/components/ProventosSection";
 import AreaEmConstrucao from "@/components/AreaEmConstrucao";
 import { PROVENTOS_HABILITADO } from "@/lib/feature-flags";
 import ObjetivosSection from "@/components/ObjetivosSection";
+import RevisarMovimentacoes from "@/components/RevisarMovimentacoes";
 import { formatDataHoraBr } from "@/lib/formatacao";
 
 const formatBRL = (v: number) =>
@@ -100,6 +102,9 @@ export default async function ClienteDetalhePage({
   registrarSnapshotIntraday(clienteId, total);
   const historico = await obterHistoricoComBenchmark(clienteId, cliente.benchmark);
   const intraday = listarPontosIntradayDeHoje(clienteId);
+  const movimentacoesPendentes = listarMovimentacoesDoCliente(clienteId).filter(
+    (m) => m.status === "pendente"
+  );
 
   return (
     <div className="space-y-5">
@@ -238,6 +243,8 @@ export default async function ClienteDetalhePage({
           </div>
         )}
       </section>
+
+      <RevisarMovimentacoes clienteId={clienteId} movimentacoes={movimentacoesPendentes} />
 
       <section className="space-y-3 rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
         <div className="flex items-center justify-between gap-2">
