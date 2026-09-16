@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSessaoFromRequest, hashSenha } from "@/lib/auth";
+import { validarForcaSenha } from "@/lib/senha";
 import {
   criarUsuario,
   criarCliente,
@@ -14,7 +15,8 @@ import {
 const schema = z.object({
   nome: z.string().min(2),
   email: z.string().email(),
-  senha: z.string().min(6),
+  senha: z.string(),
+  telefone: z.string().trim().min(1).optional(),
   perfil_risco: z.enum(["conservador", "moderado", "arrojado"]),
   objetivo: z.string().optional(),
   carteira_modelo_id: z.number().int().nullable().optional(),
@@ -50,6 +52,11 @@ export async function POST(req: NextRequest) {
   }
   const dados = parsed.data;
 
+  const erroSenha = validarForcaSenha(dados.senha);
+  if (erroSenha) {
+    return NextResponse.json({ erro: erroSenha }, { status: 400 });
+  }
+
   if (getUsuarioPorEmail(dados.email.toLowerCase())) {
     return NextResponse.json(
       { erro: "Já existe um usuário com esse e-mail." },
@@ -70,6 +77,7 @@ export async function POST(req: NextRequest) {
     consultor_id: sessao.userId,
     nome: dados.nome,
     email: dados.email.toLowerCase(),
+    telefone: dados.telefone ?? null,
     perfil_risco: dados.perfil_risco,
     objetivo: dados.objetivo ?? null,
     carteira_modelo_id: dados.carteira_modelo_id ?? null,

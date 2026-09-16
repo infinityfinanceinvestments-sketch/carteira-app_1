@@ -38,3 +38,22 @@ export function atualizarSenhaUsuario(usuarioId: number, senhaHash: string): voi
   const db = getDb();
   db.prepare("UPDATE usuarios SET senha_hash = ? WHERE id = ?").run(senhaHash, usuarioId);
 }
+
+/** `usuarios.email` é o e-mail de LOGIN (ver app/api/auth/login/route.ts) —
+ *  diferente de `clientes.email`, que é só o e-mail cadastral mostrado nas
+ *  telas do consultor. Os dois nascem iguais na criação do cliente, mas são
+ *  colunas independentes — por isso editar o e-mail do cliente (ver
+ *  app/api/clientes/[id]/dados/route.ts) precisa atualizar as duas tabelas
+ *  juntas, senão o cliente passa a ver um e-mail na tela e logar com outro. */
+export function atualizarNomeEmailUsuario(
+  usuarioId: number,
+  nome: string,
+  email: string
+): void {
+  const db = getDb();
+  db.prepare("UPDATE usuarios SET nome = ?, email = ? WHERE id = ?").run(
+    nome,
+    email,
+    usuarioId
+  );
+}

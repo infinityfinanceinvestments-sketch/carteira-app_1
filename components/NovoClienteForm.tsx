@@ -59,6 +59,7 @@ export default function NovoClienteForm({
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [telefone, setTelefone] = useState("");
   const [instituicao, setInstituicao] = useState("");
   const [objetivo, setObjetivo] = useState("");
   const [carteiraModeloId, setCarteiraModeloId] = useState<string>("");
@@ -82,6 +83,7 @@ export default function NovoClienteForm({
           nome,
           email,
           senha,
+          telefone: telefone || undefined,
           perfil_risco: perfilFinal,
           objetivo: objetivo || undefined,
           carteira_modelo_id: carteiraModeloId ? Number(carteiraModeloId) : null,
@@ -134,6 +136,15 @@ export default function NovoClienteForm({
             onChange={(e) => setSenha(e.target.value)}
             className={inputClass}
             placeholder="mínimo 8 caracteres, com letra e número"
+          />
+        </Campo>
+        <Campo label="Telefone (opcional)">
+          <input
+            type="tel"
+            value={telefone}
+            onChange={(e) => setTelefone(e.target.value)}
+            className={inputClass}
+            placeholder="(11) 91234-5678"
           />
         </Campo>
         <Campo label="Instituição/corretora principal">

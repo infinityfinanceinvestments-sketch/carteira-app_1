@@ -41,6 +41,7 @@ function migrate(db: DatabaseSync) {
   migrarColunaArquivadaRecomendacoes(db);
   migrarTipoNotificacaoObjetivo(db);
   migrarColunasIndexadorPosicoes(db);
+  migrarColunaTelefoneClientes(db);
 
   const schemaPath = path.join(process.cwd(), "lib", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf-8");
@@ -162,6 +163,23 @@ function migrarColunasIndexadorPosicoes(db: DatabaseSync) {
   }
   if (!colunas.some((c) => c.name === "indexador_percentual")) {
     db.exec(`ALTER TABLE posicoes ADD COLUMN indexador_percentual REAL`);
+  }
+}
+
+/** Adiciona a coluna `telefone` a `clientes` (usada pela aba "Dados do
+ *  cliente" que o consultor edita — ver components/EditarClienteForm.tsx) —
+ *  mesma técnica de migrarColunaArquivadaRecomendacoes: sem CHECK/NOT NULL,
+ *  dá pra usar ALTER TABLE ADD COLUMN direto. Idempotente via PRAGMA
+ *  table_info. */
+function migrarColunaTelefoneClientes(db: DatabaseSync) {
+  const tabela = db
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'clientes'`)
+    .get();
+  if (!tabela) return; // banco novo — schema.sql abaixo já cria com a coluna
+
+  const colunas = db.prepare(`PRAGMA table_info(clientes)`).all() as { name: string }[];
+  if (!colunas.some((c) => c.name === "telefone")) {
+    db.exec(`ALTER TABLE clientes ADD COLUMN telefone TEXT`);
   }
 }
 

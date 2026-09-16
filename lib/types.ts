@@ -35,6 +35,7 @@ export interface Cliente {
   consultor_id: number | null;
   nome: string;
   email: string;
+  telefone: string | null;
   perfil_risco: PerfilRisco;
   objetivo: string | null;
   carteira_modelo_id: number | null;

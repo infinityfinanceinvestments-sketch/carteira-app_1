@@ -30,6 +30,7 @@ import RecomendacaoAcoes from "@/components/RecomendacaoAcoes";
 import LimparRecomendacoesAceitas from "@/components/LimparRecomendacoesAceitas";
 import ModeloSelector from "@/components/ModeloSelector";
 import IndexadorCdiForm from "@/components/IndexadorCdiForm";
+import EditarClienteForm from "@/components/EditarClienteForm";
 import GerarLinkRedefinicao from "@/components/GerarLinkRedefinicao";
 import ProventosSection from "@/components/ProventosSection";
 import AreaEmConstrucao from "@/components/AreaEmConstrucao";
@@ -130,13 +131,16 @@ export default async function ClienteDetalhePage({
         </div>
       </div>
 
-      <GerarLinkRedefinicao usuarioId={cliente.usuario_id} nomeCliente={cliente.nome} />
+      <EditarClienteForm
+        clienteId={clienteId}
+        nome={cliente.nome}
+        email={cliente.email}
+        telefone={cliente.telefone}
+        perfilRisco={cliente.perfil_risco}
+        objetivo={cliente.objetivo}
+      />
 
-      {cliente.objetivo && (
-        <p className="rounded-xl bg-white dark:bg-[var(--color-navy-900)] p-3 text-xs text-slate-500 dark:text-slate-400 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
-          Objetivo: {cliente.objetivo}
-        </p>
-      )}
+      <GerarLinkRedefinicao usuarioId={cliente.usuario_id} nomeCliente={cliente.nome} />
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
         <p className="text-xs text-slate-500 dark:text-slate-400">Patrimônio atual</p>

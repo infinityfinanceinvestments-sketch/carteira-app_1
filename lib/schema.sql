@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS clientes (
   consultor_id INTEGER REFERENCES usuarios(id),
   nome TEXT NOT NULL,
   email TEXT NOT NULL,
+  -- Livre (sem validação de formato — DDD/9º dígito variam), opcional.
+  telefone TEXT,
   perfil_risco TEXT NOT NULL DEFAULT 'moderado' CHECK (perfil_risco IN ('conservador','moderado','arrojado')),
   objetivo TEXT,
   carteira_modelo_id INTEGER REFERENCES carteiras_modelo(id),
