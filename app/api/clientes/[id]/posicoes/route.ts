@@ -17,12 +17,20 @@ import { CLASSES_ATIVO } from "@/lib/types";
 // sem instituição não apagar esses lançamentos avulsos por engano.
 const INSTITUICAO_LANCAMENTO_AVULSO = "Lançamento avulso";
 
+// "preco_medio" e "preco_atual" são POR UNIDADE (o consultor digita o preço
+// de compra e a cotação atual, que é como ele naturalmente enxerga o ativo)
+// — mas a tabela "posicoes" guarda "valor_atual" como o valor TOTAL da
+// posição (é assim que o importador de CSV/B3 já funciona e como o resto do
+// app soma a carteira, ver valorTotalCarteira). Por isso calculamos o total
+// aqui embaixo em vez de aceitar "valor_atual" direto do formulário — isso
+// evita o consultor digitar sem querer um valor por unidade onde o sistema
+// espera o total (ou vice-versa).
 const schema = z.object({
   ativo: z.string().trim().min(1),
   classe: z.enum(CLASSES_ATIVO),
   quantidade: z.number().positive(),
   preco_medio: z.number().nonnegative(),
-  valor_atual: z.number().nonnegative(),
+  preco_atual: z.number().nonnegative(),
 });
 
 // POST /api/clientes/[id]/posicoes — lança UM ativo na carteira do cliente,
@@ -49,13 +57,20 @@ export async function POST(
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { erro: "Preencha ativo, classe, quantidade, preço médio e valor atual corretamente." },
+      { erro: "Preencha ativo, classe, quantidade, preço médio e preço atual corretamente." },
       { status: 400 }
     );
   }
 
+  const { preco_atual, ...dados } = parsed.data;
+  const valorAtualTotal = dados.quantidade * preco_atual;
+
   const contaId = getOuCriarContaManual(clienteId, INSTITUICAO_LANCAMENTO_AVULSO);
-  const posicaoId = inserirPosicao({ conta_id: contaId, ...parsed.data });
+  const posicaoId = inserirPosicao({
+    conta_id: contaId,
+    ...dados,
+    valor_atual: valorAtualTotal,
+  });
 
   const novoTotal = valorTotalCarteira(clienteId);
   substituirPontoHistoricoDoDia(
@@ -68,7 +83,7 @@ export async function POST(
     cliente_id: clienteId,
     usuario_id: sessao.userId,
     acao: "posicao_manual_adicionada",
-    detalhes: { posicaoId, ...parsed.data },
+    detalhes: { posicaoId, ...dados, preco_atual, valor_atual: valorAtualTotal },
   });
 
   return NextResponse.json({ ok: true, id: posicaoId });

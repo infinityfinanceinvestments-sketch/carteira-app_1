@@ -10,7 +10,7 @@ TESOURO SELIC 2029,Renda Fixa,10,1050.00,10800.00
 PETR4,Ações,200,28.50,31.20
 FII HGLG11,FIIs,50,160.00,172.30`;
 
-type Modo = "csv" | "b3" | "manual";
+type Modo = "csv" | "b3" | "avenue" | "manual";
 
 export default function ImportarForm({
   clientes,
@@ -27,7 +27,7 @@ export default function ImportarForm({
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 rounded-xl bg-slate-100 dark:bg-white/10 p-1 text-sm">
+      <div className="flex flex-wrap gap-2 rounded-xl bg-slate-100 dark:bg-white/10 p-1 text-sm">
         <button
           type="button"
           onClick={() => setModo("b3")}
@@ -36,6 +36,15 @@ export default function ImportarForm({
           }`}
         >
           Extrato do Portal do Investidor (B3)
+        </button>
+        <button
+          type="button"
+          onClick={() => setModo("avenue")}
+          className={`flex-1 rounded-md px-3 py-1.5 font-medium transition ${
+            modo === "avenue" ? "bg-white dark:bg-[var(--color-navy-900)] text-black dark:text-white shadow-sm" : "text-slate-500 dark:text-slate-400"
+          }`}
+        >
+          Extrato da Avenue
         </button>
         <button
           type="button"
@@ -74,6 +83,8 @@ export default function ImportarForm({
 
       {modo === "b3" ? (
         <ImportarB3 clienteId={clienteId} aoImportar={() => router.refresh()} />
+      ) : modo === "avenue" ? (
+        <ImportarAvenue clienteId={clienteId} aoImportar={() => router.refresh()} />
       ) : modo === "csv" ? (
         <ImportarCsv clienteId={clienteId} aoImportar={() => router.refresh()} />
       ) : (
@@ -180,6 +191,109 @@ function ImportarB3({ clienteId, aoImportar }: { clienteId: string; aoImportar: 
         className="w-full rounded-xl btn-accent px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
       >
         {carregando ? "Importando..." : "Importar extrato da B3"}
+      </button>
+    </form>
+  );
+}
+
+function ImportarAvenue({ clienteId, aoImportar }: { clienteId: string; aoImportar: () => void }) {
+  const { mostrarToast } = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [resultado, setResultado] = useState<{ importadas: number; avisos: string[] } | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+  const [carregando, setCarregando] = useState(false);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErro(null);
+    setResultado(null);
+    if (!clienteId) {
+      setErro("Selecione um cliente.");
+      return;
+    }
+    if (!arquivo) {
+      setErro("Selecione o extrato em PDF baixado da Avenue.");
+      return;
+    }
+    setCarregando(true);
+    try {
+      const formData = new FormData();
+      formData.set("arquivo", arquivo);
+      const res = await fetch(`/api/clientes/${clienteId}/posicoes/importar-avenue`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErro(data.erro ?? "Não foi possível importar.");
+        if (data.avisos) setResultado({ importadas: 0, avisos: data.avisos });
+        return;
+      }
+      setResultado({ importadas: data.importadas, avisos: data.avisos ?? [] });
+      setArquivo(null);
+      if (fileRef.current) fileRef.current.value = "";
+      mostrarToast(`${data.importadas} posição(ões) importada(s)!`);
+      aoImportar();
+    } catch {
+      setErro("Erro de conexão. Tente novamente.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-4">
+      <div className="space-y-3 rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          No site ou app da Avenue, baixe o extrato mensal (“Account
+          Statement”) em PDF e carregue o arquivo aqui — o app reconhece a
+          tabela “Portfolio Summary” automaticamente e já lança as posições
+          (ações e ETFs internacionais) do cliente selecionado.
+        </p>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+            Extrato mensal da Avenue (.pdf)
+          </span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf"
+            onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
+            className="w-full text-sm"
+          />
+        </label>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+          Assim como no extrato da B3, esse PDF não traz o preço médio de
+          compra original, só a cotação do dia — a rentabilidade de cada
+          posição vai refletir a partir de agora até você ajustar o preço
+          médio real, se quiser. A classe do ativo (Ações/ETFs) é um
+          palpite — confira depois de importar. Reimportar substitui as
+          posições importadas dessa forma anteriormente (não duplica).
+        </p>
+      </div>
+
+      {erro && <p className="rounded-xl bg-red-50 dark:bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-400">{erro}</p>}
+
+      {resultado && (
+        <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-300">
+          <p>{resultado.importadas} posição(ões) importada(s) com sucesso.</p>
+          {resultado.avisos.length > 0 && (
+            <ul className="mt-1 list-disc pl-4 text-xs text-amber-700 dark:text-amber-400">
+              {resultado.avisos.map((a, i) => (
+                <li key={i}>{a}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={carregando || !arquivo}
+        className="w-full rounded-xl btn-accent px-3 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+      >
+        {carregando ? "Importando..." : "Importar extrato da Avenue"}
       </button>
     </form>
   );
@@ -312,7 +426,7 @@ const CAMPOS_INICIAIS = {
   classe: CLASSES_ATIVO[0] as string,
   quantidade: "",
   preco_medio: "",
-  valor_atual: "",
+  preco_atual: "",
 };
 
 function AdicionarManual({ clienteId, aoImportar }: { clienteId: string; aoImportar: () => void }) {
@@ -334,7 +448,7 @@ function AdicionarManual({ clienteId, aoImportar }: { clienteId: string; aoImpor
     }
     const quantidade = Number(campos.quantidade.replace(",", "."));
     const preco_medio = Number(campos.preco_medio.replace(",", "."));
-    const valor_atual = Number(campos.valor_atual.replace(",", "."));
+    const preco_atual = Number(campos.preco_atual.replace(",", "."));
     if (!campos.ativo.trim()) {
       setErro("Informe o nome/código do ativo.");
       return;
@@ -347,8 +461,8 @@ function AdicionarManual({ clienteId, aoImportar }: { clienteId: string; aoImpor
       setErro("Preço médio inválido.");
       return;
     }
-    if (!Number.isFinite(valor_atual) || valor_atual < 0) {
-      setErro("Valor atual inválido.");
+    if (!Number.isFinite(preco_atual) || preco_atual < 0) {
+      setErro("Preço atual inválido.");
       return;
     }
     setCarregando(true);
@@ -361,7 +475,7 @@ function AdicionarManual({ clienteId, aoImportar }: { clienteId: string; aoImpor
           classe: campos.classe,
           quantidade,
           preco_medio,
-          valor_atual,
+          preco_atual,
         }),
       });
       const data = await res.json();
@@ -441,20 +555,21 @@ function AdicionarManual({ clienteId, aoImportar }: { clienteId: string; aoImpor
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
-              Valor atual
+              Preço atual
             </span>
             <input
               inputMode="decimal"
-              value={campos.valor_atual}
-              onChange={(e) => atualizarCampo("valor_atual", e.target.value)}
+              value={campos.preco_atual}
+              onChange={(e) => atualizarCampo("preco_atual", e.target.value)}
               placeholder="0,00"
               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--color-navy-900)] px-3 py-2 text-sm"
             />
           </label>
         </div>
         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-          Preço médio e valor atual são por unidade. Esse lançamento soma às
-          posições existentes do cliente — não substitui nada.
+          Preço médio e preço atual são por unidade/cota (o app calcula o
+          valor total da posição sozinho). Esse lançamento soma às posições
+          existentes do cliente — não substitui nada.
         </p>
       </div>
 
