@@ -63,9 +63,10 @@ function formatDiaMes(iso: string) {
   return `${Number(dia)} ${nomes[Number(mes) - 1]}`;
 }
 
-type Periodo = "7d" | "30d" | "90d" | "6m" | "1a" | "tudo";
+type Periodo = "1d" | "7d" | "30d" | "90d" | "6m" | "1a" | "tudo";
 
 const OPCOES_PERIODO: { valor: Periodo; label: string; dias: number | null }[] = [
+  { valor: "1d", label: "1D", dias: 1 },
   { valor: "7d", label: "7D", dias: 7 },
   { valor: "30d", label: "30D", dias: 30 },
   { valor: "90d", label: "90D", dias: 90 },
@@ -99,7 +100,7 @@ export default function EvolutionChart({
     return filtrarPorPeriodo(dados, opcao?.dias ?? null);
   }, [dados, periodo]);
 
-  const usarDiaMes = periodo === "7d" || periodo === "30d";
+  const usarDiaMes = periodo === "1d" || periodo === "7d" || periodo === "30d";
   const formatado = dadosFiltrados.map((d) => ({
     ...d,
     label: usarDiaMes ? formatDiaMes(d.data) : formatMesAno(d.data),
