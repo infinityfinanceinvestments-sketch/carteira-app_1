@@ -13,11 +13,14 @@
 //    a partir de agora, não desde a compra real, até que o preço médio real
 //    seja ajustado manualmente.
 //  - BDRs e ações emprestadas (aba "Empréstimos") entram na classe "Ações".
-//  - Na aba "Fundo de Investimento", só o que tem "imobiliário" no nome do
-//    produto vira "FIIs" — o resto (ex: Fiagros) entra em "Fundos".
-//  - Abas que não reconhecemos (ex: Opções, Termo, Tesouro Direto) são
-//    ignoradas com um aviso, em vez de dar erro — o resto do arquivo importa
-//    normalmente.
+//  - Na aba "Fundo de Investimento", só o que tem "imob" no nome do produto
+//    (a B3 abrevia "Imobiliário" assim, ex: "FDO INV IMOB") vira "FIIs" — o
+//    resto (ex: Fiagros) entra em "Fundos".
+//  - A aba "Tesouro Direto" usa o nome completo do título (ex: "Tesouro
+//    IPCA+ 2029") como identificador, já que não tem coluna de código de
+//    negociação — e entra na classe "Renda Fixa", junto com CDB/LCI/LCA.
+//  - Abas que não reconhecemos (ex: Opções, Termo) são ignoradas com um
+//    aviso, em vez de dar erro — o resto do arquivo importa normalmente.
 
 import ExcelJS from "exceljs";
 import type { ClasseAtivo } from "@/lib/types";
@@ -118,13 +121,28 @@ const REGRAS_POR_ABA: Record<string, RegraAba> = {
   },
   "fundo de investimento": {
     origemAtivo: "codigo_negociacao",
-    classificar: (produto) => (normalizar(produto).includes("imobili") ? "FIIs" : "Fundos"),
+    // A B3 costuma abreviar o tipo do fundo no nome do produto (ex:
+    // "HGLG11 - PATRIA LOG - FDO INV IMOB - ..."), então procura só "imob"
+    // em vez de "imobiliário" por extenso — senão um FII de verdade caía em
+    // "Fundos" por engano.
+    classificar: (produto) => (normalizar(produto).includes("imob") ? "FIIs" : "Fundos"),
     colunaValor: ["valor atualizado"],
   },
   "renda fixa": {
     origemAtivo: "produto_completo",
     classificar: () => "Renda Fixa",
     colunaValor: ["valor atualizado mtm", "valor atualizado curva", "valor atualizado fechamento"],
+  },
+  // Essa aba só existe pra quem tem título público (Tesouro Selic, Tesouro
+  // IPCA+, Tesouro Prefixado etc.) — vem com colunas próprias (ISIN,
+  // indexador, vencimento), diferentes da aba "Renda Fixa" (que é CDB, LCI/
+  // LCA e afins). Não tem coluna de código de negociação, então usa o nome
+  // completo do produto (ex: "Tesouro IPCA+ 2029") como o "ativo", igual à
+  // Renda Fixa.
+  "tesouro direto": {
+    origemAtivo: "produto_completo",
+    classificar: () => "Renda Fixa",
+    colunaValor: ["valor atualizado"],
   },
 };
 
