@@ -30,12 +30,21 @@
   --shadow-lift:
     0 16px 40px rgba(0, 0, 0, 0.22), 0 4px 10px rgba(0, 0, 0, 0.14);
   --shadow-accent: 0 10px 24px rgba(47, 125, 251, 0.32);
+
+  /* Sem isso, o navegador sempre desenha os controles NATIVOS (a lista que
+     abre de um <select>, o datepicker, a barra de rolagem) no tema claro
+     dele mesmo, ignorando a classe .dark daqui — daí o combo de "fundo
+     branco com texto claro" quase ilegível que aparecia ao abrir um
+     <select> no modo escuro. Com `color-scheme` certo, o Chrome/Edge
+     desenham esses controles nativos já no tema certo sozinhos. */
+  color-scheme: light;
 }
 
 /* Modo escuro: fundo preto (mesmo preto de marca do hero), detalhes em
    branco — o azul do acento não muda entre os dois modos, só o fundo e o
    texto, exatamente como pedido. */
 .dark {
+  color-scheme: dark;
   --color-canvas: var(--color-navy-950);
   --color-ink: #ffffff;
   --shadow-card:
@@ -77,6 +86,25 @@ body {
 .scroll-x {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* A lista que abre de um <select> ficava ilegível no modo escuro (texto
+   claro em fundo branco) mesmo com `color-scheme: dark` (ver acima) certo
+   no <html> — o motivo é que todo <select> do app usa `bg-transparent`
+   (pra combinar com o fundo do card em vez de aparecer um retângulo sólido)
+   e, assim que o autor define um `background` próprio no <select>, o
+   Chrome/Edge param de pintar as linhas da lista automaticamente no tema
+   certo e caem num branco padrão — só o item em destaque (com o azul de
+   seleção) continua legível. Por isso as opções ganham cor explícita aqui,
+   em vez de depender do "automático" do navegador. */
+select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.dark select option {
+  background-color: var(--color-navy-900);
+  color: #f1f5f9;
 }
 
 /* ---------- Sistema visual orgânico ----------

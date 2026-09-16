@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface Notificacao {
   id: number;
-  tipo: "recomendacao" | "variacao_preco" | "desvio_modelo" | "objetivo_concluido";
+  tipo: "recomendacao" | "variacao_preco" | "desvio_modelo" | "objetivo_concluido" | "movimentacao";
   titulo: string;
   mensagem: string;
   lida: number;
@@ -29,7 +30,16 @@ export default function SinoNotificacoes({ clienteId }: { clienteId: number }) {
   const [aberto, setAberto] = useState(false);
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [naoLidas, setNaoLidas] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Posição do painel calculada a partir do botão (ver abrir()) — o painel
+  // é renderizado num portal direto no <body>, em vez de como filho do
+  // cabeçalho, porque o cabeçalho usa a classe `.hero-organic`, que tem
+  // `overflow: hidden` (pros "blobs" desfocados decorativos não vazarem do
+  // cantinho arredondado). Isso cortava o painel de notificações quase
+  // inteiro, sobrando só uma tirinha — parecia "travado"/quebrado. Com
+  // portal, o painel fica fora dessa árvore e não é mais cortado.
+  const [posicao, setPosicao] = useState<{ top: number; right: number } | null>(null);
+  const botaoRef = useRef<HTMLButtonElement>(null);
+  const painelRef = useRef<HTMLDivElement>(null);
 
   const buscar = useCallback(async () => {
     try {
@@ -52,7 +62,10 @@ export default function SinoNotificacoes({ clienteId }: { clienteId: number }) {
 
   useEffect(() => {
     function aoClicarFora(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const alvo = e.target as Node;
+      const dentroDoBotao = botaoRef.current?.contains(alvo);
+      const dentroDoPainel = painelRef.current?.contains(alvo);
+      if (!dentroDoBotao && !dentroDoPainel) {
         setAberto(false);
       }
     }
@@ -60,8 +73,27 @@ export default function SinoNotificacoes({ clienteId }: { clienteId: number }) {
     return () => document.removeEventListener("mousedown", aoClicarFora);
   }, []);
 
+  // Recalcula a posição se a janela for redimensionada enquanto o painel
+  // está aberto (ex: girar o celular) — sem isso o painel ficaria "flutuando"
+  // longe do sino depois do redimensionamento, já que a posição é fixa em
+  // pixels calculada no momento em que abriu.
+  useEffect(() => {
+    if (!aberto) return;
+    function reposicionar() {
+      if (!botaoRef.current) return;
+      const rect = botaoRef.current.getBoundingClientRect();
+      setPosicao({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
+    window.addEventListener("resize", reposicionar);
+    return () => window.removeEventListener("resize", reposicionar);
+  }, [aberto]);
+
   async function abrir() {
     const vaiAbrir = !aberto;
+    if (vaiAbrir && botaoRef.current) {
+      const rect = botaoRef.current.getBoundingClientRect();
+      setPosicao({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+    }
     setAberto(vaiAbrir);
     if (vaiAbrir && naoLidas > 0) {
       setNaoLidas(0);
@@ -74,8 +106,9 @@ export default function SinoNotificacoes({ clienteId }: { clienteId: number }) {
   }
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative">
       <button
+        ref={botaoRef}
         type="button"
         onClick={abrir}
         aria-label="Notificações"
@@ -89,32 +122,44 @@ export default function SinoNotificacoes({ clienteId }: { clienteId: number }) {
         )}
       </button>
 
-      {aberto && (
-        <div className="absolute right-0 z-20 mt-2 w-72 overflow-hidden rounded-3xl card-sheen text-slate-800 dark:text-slate-100 shadow-xl ring-1 ring-black/5 dark:ring-white/10">
-          <div className="border-b border-slate-100 dark:border-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-            Notificações
-          </div>
-          <div className="max-h-80 overflow-y-auto">
-            {notificacoes.length === 0 ? (
-              <p className="px-3 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
-                Nenhuma notificação ainda.
-              </p>
-            ) : (
-              <ul className="divide-y divide-slate-100 dark:divide-white/10">
-                {notificacoes.map((n) => (
-                  <li key={n.id} className={`px-3 py-2.5 ${n.lida ? "" : "bg-blue-50/50 dark:bg-blue-500/10"}`}>
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{n.titulo}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{n.mensagem}</p>
-                    <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
-                      {formatQuando(n.criado_em)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Sem gate de "montado": `aberto` começa `false` tanto no servidor
+          quanto no cliente (só vira `true` num clique, depois da hidratação),
+          então o portal nunca é tentado durante a renderização no servidor —
+          não tem risco de divergência de hidratação nem de `document`
+          indefinido. */}
+      {aberto &&
+        posicao &&
+        createPortal(
+          <div
+            ref={painelRef}
+            style={{ position: "fixed", top: posicao.top, right: posicao.right }}
+            className="z-50 w-72 overflow-hidden rounded-3xl card-sheen text-slate-800 dark:text-slate-100 shadow-xl ring-1 ring-black/5 dark:ring-white/10"
+          >
+            <div className="border-b border-slate-100 dark:border-white/5 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+              Notificações
+            </div>
+            <div className="max-h-80 overflow-y-auto">
+              {notificacoes.length === 0 ? (
+                <p className="px-3 py-6 text-center text-sm text-slate-400 dark:text-slate-500">
+                  Nenhuma notificação ainda.
+                </p>
+              ) : (
+                <ul className="divide-y divide-slate-100 dark:divide-white/10">
+                  {notificacoes.map((n) => (
+                    <li key={n.id} className={`px-3 py-2.5 ${n.lida ? "" : "bg-blue-50/50 dark:bg-blue-500/10"}`}>
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{n.titulo}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{n.mensagem}</p>
+                      <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-500">
+                        {formatQuando(n.criado_em)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
