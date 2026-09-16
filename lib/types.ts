@@ -59,6 +59,10 @@ export interface Posicao {
   preco_medio: number;
   valor_atual: number;
   atualizado_em: string;
+  // Só relevante pra Renda Fixa — ver lib/rendaFixaIndexada.ts. `null`
+  // quando a posição não tem atualização automática de valor (o padrão).
+  indexador: string | null;
+  indexador_percentual: number | null;
 }
 
 export interface FavoritoMercado {

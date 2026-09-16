@@ -40,6 +40,7 @@ function migrate(db: DatabaseSync) {
   migrarTipoNotificacaoDesvio(db);
   migrarColunaArquivadaRecomendacoes(db);
   migrarTipoNotificacaoObjetivo(db);
+  migrarColunasIndexadorPosicoes(db);
 
   const schemaPath = path.join(process.cwd(), "lib", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf-8");
@@ -141,6 +142,26 @@ function migrarTipoNotificacaoObjetivo(db: DatabaseSync) {
   } catch (erro) {
     db.exec("ROLLBACK");
     throw erro;
+  }
+}
+
+/** Adiciona as colunas `indexador` e `indexador_percentual` a `posicoes`
+ *  (usadas pra atualização automática de Renda Fixa indexada ao CDI, ver
+ *  lib/rendaFixaIndexada.ts) — mesma técnica de
+ *  migrarColunaArquivadaRecomendacoes: sem CHECK/NOT NULL, dá pra usar
+ *  ALTER TABLE ADD COLUMN direto. Idempotente via PRAGMA table_info. */
+function migrarColunasIndexadorPosicoes(db: DatabaseSync) {
+  const tabela = db
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'posicoes'`)
+    .get();
+  if (!tabela) return; // banco novo — schema.sql abaixo já cria com as colunas
+
+  const colunas = db.prepare(`PRAGMA table_info(posicoes)`).all() as { name: string }[];
+  if (!colunas.some((c) => c.name === "indexador")) {
+    db.exec(`ALTER TABLE posicoes ADD COLUMN indexador TEXT`);
+  }
+  if (!colunas.some((c) => c.name === "indexador_percentual")) {
+    db.exec(`ALTER TABLE posicoes ADD COLUMN indexador_percentual REAL`);
   }
 }
 

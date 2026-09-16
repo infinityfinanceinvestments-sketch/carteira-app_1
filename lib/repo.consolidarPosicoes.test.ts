@@ -17,6 +17,8 @@ function posicao(overrides: Partial<Posicao>): Posicao {
     preco_medio: 30,
     valor_atual: 3200,
     atualizado_em: "2026-01-01T10:00:00.000Z",
+    indexador: null,
+    indexador_percentual: null,
     ...overrides,
   };
 }
@@ -67,6 +69,13 @@ describe("consolidarPosicoes", () => {
     const p2 = posicao({ id: 2, atualizado_em: "2026-02-01T10:00:00.000Z" });
     const [resultado] = consolidarPosicoes([p1, p2]);
     expect(resultado.atualizado_em).toBe("2026-02-01T10:00:00.000Z");
+  });
+
+  it("carrega o indexador/percentual do primeiro lote do grupo", () => {
+    const p1 = posicao({ id: 1, indexador: "CDI", indexador_percentual: 100 });
+    const [resultado] = consolidarPosicoes([p1]);
+    expect(resultado.indexador).toBe("CDI");
+    expect(resultado.indexador_percentual).toBe(100);
   });
 
   it("não divide por zero quando a quantidade total consolidada é zero", () => {

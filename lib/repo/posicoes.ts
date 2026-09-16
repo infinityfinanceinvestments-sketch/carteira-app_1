@@ -95,6 +95,10 @@ export function consolidarPosicoes(posicoes: Posicao[]): Posicao[] {
     preco_medio: g.quantidade !== 0 ? g.custoTotal / g.quantidade : 0,
     valor_atual: g.valor_atual,
     atualizado_em: g.atualizado_em,
+    // Só faz sentido um valor por ativo consolidado — usa o do primeiro
+    // lote do grupo (o caso comum é um lote só por ativo de Renda Fixa).
+    indexador: g.indexador,
+    indexador_percentual: g.indexador_percentual,
   }));
 }
 
@@ -131,12 +135,34 @@ export function removerPosicoesDaConta(contaId: number): void {
   db.prepare("DELETE FROM posicoes WHERE conta_id = ?").run(contaId);
 }
 
-/** Atualiza só o valor de mercado de uma posição (ex: cotação atual da B3),
- *  sem mexer em quantidade/preço médio — usado pra refletir o preço real
- *  do ativo em vez do valor lançado manualmente. */
+/** Atualiza só o valor de mercado de uma posição (ex: cotação atual da B3,
+ *  ou o rendimento acumulado do CDI — ver lib/rendaFixaIndexada.ts), sem
+ *  mexer em quantidade/preço médio — usado pra refletir o preço/valor real
+ *  do ativo em vez do valor lançado manualmente. Também avança
+ *  `atualizado_em` pra hoje, que é a "data base" usada pra calcular o
+ *  próximo incremento de rendimento indexado — por isso nunca aplica o
+ *  mesmo dia duas vezes. */
 export function atualizarValorAtualPosicao(id: number, valorAtual: number): void {
   const db = getDb();
   db.prepare(
     `UPDATE posicoes SET valor_atual = ?, atualizado_em = datetime('now') WHERE id = ?`
   ).run(valorAtual, id);
+}
+
+/** Marca (ou desmarca, passando `indexador: null`) uma posição de Renda
+ *  Fixa como indexada a um indicador de mercado (hoje só "CDI" é suportado)
+ *  com um percentual do indicador (ex: 100 pra "100% do CDI") — é isso que
+ *  liga a atualização automática de valor em lib/rendaFixaIndexada.ts. Não
+ *  mexe em `atualizado_em`: a data-base do próximo cálculo continua sendo a
+ *  última vez que o valor foi de fato atualizado (importação, lançamento
+ *  manual, ou um incremento anterior do CDI). */
+export function atualizarIndexadorPosicao(
+  id: number,
+  indexador: string | null,
+  indexadorPercentual: number | null
+): void {
+  const db = getDb();
+  db.prepare(
+    `UPDATE posicoes SET indexador = ?, indexador_percentual = ? WHERE id = ?`
+  ).run(indexador, indexadorPercentual, id);
 }

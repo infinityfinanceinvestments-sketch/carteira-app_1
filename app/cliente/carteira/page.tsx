@@ -8,6 +8,7 @@ import {
   valorTotalCarteira,
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
+import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
 import AllocationDonut from "@/components/AllocationDonut";
 import EvolutionChart from "@/components/EvolutionChart";
 
@@ -19,6 +20,15 @@ export default async function MinhaCarteiraPage() {
   if (!sessao?.clienteId) redirect("/login");
   const cliente = getClientePorId(sessao.clienteId);
   if (!cliente) redirect("/login");
+
+  // Antes de montar a tela, rende automaticamente as posições de Renda Fixa
+  // marcadas como indexadas ao CDI (ex: CDBs "100% do CDI") — best effort,
+  // nunca derruba a página por causa disso.
+  try {
+    await atualizarRendaFixaIndexada(listarPosicoesDoCliente(cliente.id));
+  } catch (erro) {
+    console.error("Erro atualizando renda fixa indexada", erro);
+  }
 
   const posicoes = consolidarPosicoes(listarPosicoesDoCliente(cliente.id));
   const alocacao = alocacaoPorClasse(cliente.id);

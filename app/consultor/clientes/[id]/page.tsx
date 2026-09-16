@@ -16,6 +16,7 @@ import {
   listarObjetivosComProgresso,
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
+import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
 import { sincronizarProventosAutomaticos } from "@/lib/proventos-auto";
 import AllocationDonut from "@/components/AllocationDonut";
 import DeviationChart from "@/components/DeviationChart";
@@ -25,6 +26,7 @@ import RecomendacaoForm from "@/components/RecomendacaoForm";
 import RecomendacaoAcoes from "@/components/RecomendacaoAcoes";
 import LimparRecomendacoesAceitas from "@/components/LimparRecomendacoesAceitas";
 import ModeloSelector from "@/components/ModeloSelector";
+import IndexadorCdiForm from "@/components/IndexadorCdiForm";
 import GerarLinkRedefinicao from "@/components/GerarLinkRedefinicao";
 import ProventosSection from "@/components/ProventosSection";
 import AreaEmConstrucao from "@/components/AreaEmConstrucao";
@@ -50,6 +52,15 @@ export default async function ClienteDetalhePage({
   const clienteId = Number(id);
   const cliente = getClientePorId(clienteId);
   if (!cliente) notFound();
+
+  // Antes de montar a tela, rende automaticamente as posições de Renda Fixa
+  // marcadas como indexadas ao CDI (ex: CDBs "100% do CDI") — best effort,
+  // nunca derruba a página por causa disso.
+  try {
+    await atualizarRendaFixaIndexada(listarPosicoesDoCliente(clienteId));
+  } catch (erro) {
+    console.error("Erro atualizando renda fixa indexada", erro);
+  }
 
   const posicoes = consolidarPosicoes(listarPosicoesDoCliente(clienteId));
   const alocacao = alocacaoPorClasse(clienteId);
@@ -160,6 +171,13 @@ export default async function ClienteDetalhePage({
             </a>
           )}
         </div>
+        {posicoes.some((p) => p.classe === "Renda Fixa") && (
+          <p className="mb-2 text-[11px] text-slate-400 dark:text-slate-500">
+            Marque um título de Renda Fixa como indexado ao CDI (coluna
+            &ldquo;Rende&rdquo;) pra o valor dele render sozinho todo dia que a
+            carteira for aberta, sem precisar reimportar nada.
+          </p>
+        )}
         {posicoes.length === 0 ? (
           <p className="text-sm text-slate-400 dark:text-slate-500">
             Nenhuma posição cadastrada. Use “Importar CSV” para carregar a carteira.
@@ -173,6 +191,7 @@ export default async function ClienteDetalhePage({
                   <th className="px-1 py-1.5 font-medium">Classe</th>
                   <th className="px-1 py-1.5 font-medium">Qtd.</th>
                   <th className="px-1 py-1.5 text-right font-medium">Valor atual</th>
+                  <th className="px-1 py-1.5 font-medium">Rende</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/10">
@@ -185,6 +204,16 @@ export default async function ClienteDetalhePage({
                     <td className="px-1 py-1.5 text-slate-500 dark:text-slate-400">{p.quantidade}</td>
                     <td className="px-1 py-1.5 text-right text-slate-800 dark:text-slate-100">
                       {formatBRL(p.valor_atual)}
+                    </td>
+                    <td className="px-1 py-1.5">
+                      {p.classe === "Renda Fixa" && (
+                        <IndexadorCdiForm
+                          clienteId={clienteId}
+                          posicaoId={p.id}
+                          indexador={p.indexador}
+                          indexadorPercentual={p.indexador_percentual}
+                        />
+                      )}
                     </td>
                   </tr>
                 ))}

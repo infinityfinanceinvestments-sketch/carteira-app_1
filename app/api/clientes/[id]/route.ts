@@ -14,6 +14,7 @@ import {
   jaNotificouDesvioHoje,
 } from "@/lib/repo";
 import { atualizarPrecosDeMercado } from "@/lib/cotacoes";
+import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
 import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
 import { sincronizarProventosAutomaticos } from "@/lib/proventos-auto";
 
@@ -49,6 +50,14 @@ export async function GET(
     await atualizarPrecosDeMercado(listarPosicoesDoCliente(clienteId));
   } catch (erro) {
     console.error("Erro atualizando cotações de mercado", erro);
+  }
+
+  // Mesmo espírito acima (best effort): rende automaticamente as posições
+  // de Renda Fixa marcadas como indexadas ao CDI (ex: CDBs "100% do CDI").
+  try {
+    await atualizarRendaFixaIndexada(listarPosicoesDoCliente(clienteId));
+  } catch (erro) {
+    console.error("Erro atualizando renda fixa indexada", erro);
   }
 
   // Mesmo espírito da atualização de cotações acima (best effort), mas SEM

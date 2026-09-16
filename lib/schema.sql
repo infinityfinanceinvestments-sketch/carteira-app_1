@@ -50,7 +50,12 @@ CREATE TABLE IF NOT EXISTS posicoes (
   quantidade REAL NOT NULL,
   preco_medio REAL NOT NULL,
   valor_atual REAL NOT NULL,
-  atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+  atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  -- Só usado em posições de Renda Fixa marcadas pelo consultor como
+  -- indexadas (ex: "100% do CDI") — ver lib/rendaFixaIndexada.ts. NULL
+  -- (o padrão) significa "sem atualização automática", igual sempre foi.
+  indexador TEXT,
+  indexador_percentual REAL
 );
 
 CREATE TABLE IF NOT EXISTS historico_patrimonio (
