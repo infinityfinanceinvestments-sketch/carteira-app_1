@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTextoAvenue } from "./importarAvenue";
+import { parseTextoAvenue, converterParaReais } from "./importarAvenue";
 
 // Texto sintético (dados fictícios) que reproduz a mesma estrutura de tabs
 // e quebras de linha que o pdf-parse extrai de um extrato real da Avenue —
@@ -79,5 +79,34 @@ describe("parseTextoAvenue", () => {
     const resultado = parseTextoAvenue("PORTFOLIO SUMMARY -\nnada aqui\nACCOUNT ACTIVITY -");
     expect(resultado.linhas).toHaveLength(0);
     expect(resultado.avisos.length).toBeGreaterThan(0);
+  });
+});
+
+describe("converterParaReais", () => {
+  it("multiplica preco_medio e valor_atual de todas as linhas pela cotação", () => {
+    const emDolar = parseTextoAvenue(TEXTO_EXEMPLO);
+    const emReais = converterParaReais(emDolar, 5);
+
+    const ficticia = emReais.linhas.find((l) => l.ativo === "FIC.B");
+    expect(ficticia?.preco_medio).toBeCloseTo(505 * 5);
+    expect(ficticia?.valor_atual).toBeCloseTo(2022.2 * 5);
+
+    // Não deve mexer nos valores originais em dólar.
+    const ficticiaDolar = emDolar.linhas.find((l) => l.ativo === "FIC.B");
+    expect(ficticiaDolar?.preco_medio).toBeCloseTo(505);
+  });
+
+  it("mantém a quantidade e a classe intactas, só converte valores monetários", () => {
+    const emDolar = parseTextoAvenue(TEXTO_EXEMPLO);
+    const emReais = converterParaReais(emDolar, 5);
+    const etf = emReais.linhas.find((l) => l.ativo === "ESDIV");
+    expect(etf?.quantidade).toBeCloseTo(77);
+    expect(etf?.classe).toBe("ETFs");
+  });
+
+  it("acrescenta um aviso informando a cotação usada", () => {
+    const emDolar = parseTextoAvenue(TEXTO_EXEMPLO);
+    const emReais = converterParaReais(emDolar, 5.12);
+    expect(emReais.avisos.some((a) => a.includes("dólar") && a.includes("real"))).toBe(true);
   });
 });

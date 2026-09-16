@@ -25,6 +25,11 @@
 //    pode reimportar depois de editar manualmente, se precisar corrigir).
 //  - Só a seção "PORTFOLIO SUMMARY" (posições atuais) é lida — o histórico
 //    de transações e dividendos do mesmo extrato é ignorado de propósito.
+//
+// `parseTextoAvenue`/`parseExtratoAvenue` devolvem os valores em DÓLAR, do
+// jeito que estão no PDF — a conversão pra real (que é o que o resto do app
+// espera) é feita à parte por `converterParaReais`, já com a cotação do dia
+// buscada por quem chama (ver a rota de importação).
 
 import { PDFParse } from "pdf-parse";
 import type { ClasseAtivo } from "@/lib/types";
@@ -155,6 +160,37 @@ export function parseTextoAvenue(texto: string): ResultadoImportacaoAvenue {
   }
 
   return { linhas, avisos };
+}
+
+/** O extrato da Avenue vem inteiro em dólar (é uma corretora americana), mas
+ *  o resto do app assume que todo valor guardado em "posicoes" já está em
+ *  reais (é assim que o extrato da B3 sempre chegou). Por isso o resultado
+ *  de `parseTextoAvenue`/`parseExtratoAvenue` continua em USD (pra não
+ *  acoplar o parser em si a uma cotação de câmbio, e pra manter os testes
+ *  simples de escrever/ler), e essa função separada — pura, sem rede —
+ *  multiplica tudo pela cotação do dólar do momento da importação antes de
+ *  gravar. Quem chama busca a cotação (ex: `buscarCotacaoDolar`) e passa
+ *  aqui. */
+export function converterParaReais(
+  resultado: ResultadoImportacaoAvenue,
+  cotacaoDolar: number
+): ResultadoImportacaoAvenue {
+  const linhas = resultado.linhas.map((linha) => ({
+    ...linha,
+    preco_medio: linha.preco_medio * cotacaoDolar,
+    valor_atual: linha.valor_atual * cotacaoDolar,
+  }));
+
+  return {
+    linhas,
+    avisos: [
+      ...resultado.avisos,
+      `Valores convertidos de dólar pra real usando a cotação de ${cotacaoDolar.toLocaleString(
+        "pt-BR",
+        { style: "currency", currency: "BRL" }
+      )} por dólar.`,
+    ],
+  };
 }
 
 export async function parseExtratoAvenue(buffer: Buffer): Promise<ResultadoImportacaoAvenue> {

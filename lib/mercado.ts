@@ -80,6 +80,60 @@ export async function buscarCotacoesMercado(tickers: string[]): Promise<CotacaoM
   return Promise.all(unicos.map(buscarCotacaoUnica));
 }
 
+// ---------- Cotação do dólar (conversão de extratos em USD, ex: Avenue) ----------
+
+const TTL_DOLAR_MS = 30 * 60 * 1000; // 30min — câmbio não precisa ser "ao vivo" tick a tick
+
+export interface CotacaoDolar {
+  cotacao: number | null;
+  atualizadoEm: string;
+  erro?: string;
+}
+
+let cacheDolar: { buscadoEm: number; dado: CotacaoDolar } | null = null;
+
+/** Busca a cotação de venda do dólar (quantos reais vale 1 USD) via Yahoo
+ *  Finance ("BRL=X" é o ticker padrão deles pro par USD/BRL — mesma fonte já
+ *  usada em `buscarCotacoesMercado`, só que sem o sufixo ".SA"). Usada pra
+ *  converter extratos de corretoras americanas (ex: Avenue) que chegam em
+ *  dólar pra reais antes de gravar no banco — o resto do app assume que todo
+ *  valor guardado já está em BRL. Nunca lança exceção — devolve `erro` se não
+ *  conseguir buscar, pra quem chamou decidir o que fazer (não converter às
+ *  cegas). */
+export async function buscarCotacaoDolar(): Promise<CotacaoDolar> {
+  if (cacheDolar && Date.now() - cacheDolar.buscadoEm < TTL_DOLAR_MS) {
+    return cacheDolar.dado;
+  }
+
+  const dado: CotacaoDolar = { cotacao: null, atualizadoEm: new Date().toISOString() };
+  try {
+    const url = "https://query1.finance.yahoo.com/v8/finance/chart/BRL=X?range=5d&interval=1d";
+    const res = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT },
+      next: { revalidate: false },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    const preco = json?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    if (typeof preco === "number" && preco > 0) {
+      dado.cotacao = preco;
+    } else {
+      dado.erro = "Não consegui achar a cotação do dólar agora.";
+    }
+  } catch (erro) {
+    console.error("Erro buscando cotação do dólar", erro);
+    dado.erro = "Não foi possível buscar a cotação do dólar agora.";
+  }
+
+  // Só guarda em cache quando deu certo — se falhou, a próxima chamada tenta
+  // de novo em vez de ficar 30min devolvendo erro à toa.
+  if (dado.cotacao != null) {
+    cacheDolar = { buscadoEm: Date.now(), dado };
+  }
+  return dado;
+}
+
 // ---------- Curvas de juros: prefixada e Tesouro IPCA+ (NTN-B) ----------
 //
 // Fonte: arquivo público diário do Tesouro Direto (mesmo dado que embasa o

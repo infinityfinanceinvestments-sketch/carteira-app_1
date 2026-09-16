@@ -10,7 +10,8 @@ import {
   valorTotalCarteira,
   substituirPontoHistoricoDoDia,
 } from "@/lib/repo";
-import { parseExtratoAvenue } from "@/lib/importarAvenue";
+import { parseExtratoAvenue, converterParaReais } from "@/lib/importarAvenue";
+import { buscarCotacaoDolar } from "@/lib/mercado";
 
 // Nome fixo da "conta" onde as posições importadas do extrato da Avenue
 // ficam guardadas — sempre o mesmo pra um cliente, então reimportar (ex:
@@ -77,6 +78,24 @@ export async function POST(
     );
   }
 
+  // O extrato da Avenue vem em dólar — o resto do app (soma da carteira,
+  // gráficos, relatórios) assume que tudo já está em reais, então converte
+  // aqui antes de gravar. Se não conseguir buscar a cotação, não dá pra
+  // adivinhar: melhor pedir pra tentar de novo do que gravar valor em dólar
+  // como se fosse real (é exatamente o bug que gerou esse código).
+  const { cotacao: cotacaoDolar, erro: erroCotacao } = await buscarCotacaoDolar();
+  if (cotacaoDolar == null) {
+    return NextResponse.json(
+      {
+        erro:
+          erroCotacao ??
+          "Não consegui buscar a cotação do dólar pra converter o extrato. Tente novamente em instantes.",
+      },
+      { status: 503 }
+    );
+  }
+  resultado = converterParaReais(resultado, cotacaoDolar);
+
   const contaId = getOuCriarContaManual(clienteId, INSTITUICAO_AVENUE);
   const posicoesAntes = listarPosicoesDaConta(contaId);
   const valorAntes = posicoesAntes.reduce((acc, p) => acc + p.valor_atual, 0);
@@ -98,6 +117,7 @@ export async function POST(
       posicoesDepois: resultado.linhas.length,
       valorAntes,
       valorDepois: resultado.linhas.reduce((acc, l) => acc + l.valor_atual, 0),
+      cotacaoDolar,
     },
   });
 

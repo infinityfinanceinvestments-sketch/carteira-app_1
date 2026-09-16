@@ -264,12 +264,15 @@ function ImportarAvenue({ clienteId, aoImportar }: { clienteId: string; aoImport
           />
         </label>
         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-          Assim como no extrato da B3, esse PDF não traz o preço médio de
-          compra original, só a cotação do dia — a rentabilidade de cada
-          posição vai refletir a partir de agora até você ajustar o preço
-          médio real, se quiser. A classe do ativo (Ações/ETFs) é um
-          palpite — confira depois de importar. Reimportar substitui as
-          posições importadas dessa forma anteriormente (não duplica).
+          O extrato vem em dólar — o app já converte pra real automaticamente
+          usando a cotação do momento da importação (aparece um aviso com a
+          cotação usada). Assim como no extrato da B3, esse PDF não traz o
+          preço médio de compra original, só a cotação do dia — a
+          rentabilidade de cada posição vai refletir a partir de agora até
+          você ajustar o preço médio real, se quiser. A classe do ativo
+          (Ações/ETFs) é um palpite — confira depois de importar. Reimportar
+          substitui as posições importadas dessa forma anteriormente (não
+          duplica).
         </p>
       </div>
 
