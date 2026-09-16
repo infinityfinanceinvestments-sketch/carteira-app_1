@@ -177,22 +177,42 @@ function paraNumeroBr(valor: string | undefined): number {
   return Number(valor.replace(",", "."));
 }
 
+/** Faz o download em si, sem cache/retry — extraído só pra poder tentar de
+ *  novo uma vez (ver buscarCurvaTesouroDireto) sem duplicar a chamada de
+ *  fetch. */
+async function baixarCsvTesouroDireto(timeoutMs: number): Promise<string> {
+  const res = await fetch(URL_TESOURO_DIRETO, {
+    headers: { "User-Agent": USER_AGENT },
+    next: { revalidate: false },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.text();
+}
+
 export async function buscarCurvaTesouroDireto(): Promise<CurvasMercado> {
   if (cacheCurvas && Date.now() - cacheCurvas.buscadoEm < TTL_CURVA_MS) {
     return cacheCurvas.dado;
   }
 
   try {
-    const res = await fetch(URL_TESOURO_DIRETO, {
-      headers: { "User-Agent": USER_AGENT },
-      next: { revalidate: false },
-      // O arquivo é o histórico completo do Tesouro Direto (todas as datas
-      // desde sempre, não só hoje), então pode demorar mais que o normal
-      // pra baixar — mas não pode ficar pendurado indefinidamente.
-      signal: AbortSignal.timeout(20_000),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const texto = await res.text();
+    // O arquivo é o histórico completo do Tesouro Direto (todas as datas
+    // desde sempre, não só hoje — ~14MB), servido por um portal do governo
+    // que costuma ser lento pra liberar um arquivo desse tamanho. 20s
+    // estava curto demais e fazia essa busca falhar SEMPRE (não só às
+    // vezes) — por isso o timeout maior, e uma segunda tentativa antes de
+    // desistir (rede/servidor lento é intermitente por natureza).
+    const TIMEOUT_MS = 45_000;
+    let texto: string;
+    try {
+      texto = await baixarCsvTesouroDireto(TIMEOUT_MS);
+    } catch (primeiraTentativa) {
+      console.error(
+        "Tesouro Direto: 1ª tentativa falhou, tentando mais uma vez —",
+        primeiraTentativa instanceof Error ? primeiraTentativa.message : primeiraTentativa
+      );
+      texto = await baixarCsvTesouroDireto(TIMEOUT_MS);
+    }
     const linhas = texto
       .split("\n")
       .map((l) => l.trim())
@@ -275,7 +295,12 @@ export async function buscarCurvaTesouroDireto(): Promise<CurvasMercado> {
     cacheCurvas = { buscadoEm: Date.now(), dado };
     return dado;
   } catch (erro) {
-    console.error("Erro buscando curva do Tesouro Direto", erro);
+    // Detalha nome/mensagem do erro (ex: "TimeoutError" quando estoura o
+    // AbortSignal, ou "HTTP 403/503" do throw acima) — ajuda a diagnosticar
+    // pelos logs do Railway se voltar a falhar mesmo com o timeout maior.
+    const detalhe =
+      erro instanceof Error ? `${erro.name}: ${erro.message}` : String(erro);
+    console.error("Erro buscando curva do Tesouro Direto —", detalhe);
     // Não guarda erro no cache, pra próxima chamada tentar de novo.
     return {
       atualizadoEm: new Date().toISOString(),
