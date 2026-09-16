@@ -17,6 +17,7 @@ import {
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
 import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
+import { atualizarPrecosDeMercado } from "@/lib/cotacoes";
 import { sincronizarProventosAutomaticos } from "@/lib/proventos-auto";
 import AllocationDonut from "@/components/AllocationDonut";
 import DeviationChart from "@/components/DeviationChart";
@@ -53,9 +54,16 @@ export default async function ClienteDetalhePage({
   const cliente = getClientePorId(clienteId);
   if (!cliente) notFound();
 
-  // Antes de montar a tela, rende automaticamente as posições de Renda Fixa
-  // marcadas como indexadas ao CDI (ex: CDBs "100% do CDI") — best effort,
-  // nunca derruba a página por causa disso.
+  // Antes de montar a tela, atualiza a cotação de mercado de ações/FIIs/ETFs
+  // (pra rentabilidade da carteira refletir o preço real de hoje, não o
+  // valor de quando a posição foi importada/lançada) e rende as posições de
+  // Renda Fixa indexadas ao CDI — as duas são "best effort" e nunca
+  // derrubam a página por causa disso.
+  try {
+    await atualizarPrecosDeMercado(listarPosicoesDoCliente(clienteId));
+  } catch (erro) {
+    console.error("Erro atualizando cotações de mercado", erro);
+  }
   try {
     await atualizarRendaFixaIndexada(listarPosicoesDoCliente(clienteId));
   } catch (erro) {
