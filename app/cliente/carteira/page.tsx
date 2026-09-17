@@ -134,7 +134,13 @@ export default async function MinhaCarteiraPage() {
 
       <InformarMovimentacao
         clienteId={cliente.id}
-        posicoes={posicoes.map((p) => ({ id: p.id, ativo: p.ativo, classe: p.classe }))}
+        posicoes={posicoes.map((p) => ({
+          id: p.id,
+          ativo: p.ativo,
+          classe: p.classe,
+          valor_atual: p.valor_atual,
+          quantidade: p.quantidade,
+        }))}
         movimentacoes={movimentacoes}
       />
 

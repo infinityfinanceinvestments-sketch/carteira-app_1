@@ -10,6 +10,8 @@ interface PosicaoOpcao {
   id: number;
   ativo: string;
   classe: string;
+  valor_atual: number;
+  quantidade: number;
 }
 
 interface MovimentacaoResumo {
@@ -27,6 +29,11 @@ const inputClass =
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+// Converte um número pro formato que os campos de Valor/Quantidade esperam
+// digitado (vírgula decimal, sem separador de milhar) — os dois campos já
+// fazem o caminho inverso com `Number(x.replace(",", "."))` ao enviar.
+const paraCampoDecimal = (v: number) => String(v).replace(".", ",");
 
 /** Botão + formulário na carteira do cliente pra informar um aporte ou
  *  retirada feito por fora do app — como ainda não há integração
@@ -55,6 +62,11 @@ export default function InformarMovimentacao({
   const [observacao, setObservacao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Marca que o cliente quer se desfazer do ativo inteiro (não só uma
+  // parte) — em vez de ele ter que calcular e digitar o valor/quantidade
+  // certinho na mão, preenche os dois sozinho com o total da posição
+  // escolhida (ver handlePosicaoChange/handleRetirarTudoChange abaixo).
+  const [retirarTudo, setRetirarTudo] = useState(false);
 
   const pendentes = movimentacoes.filter((m) => m.status === "pendente");
   const resolvidasRecentes = movimentacoes
@@ -71,6 +83,39 @@ export default function InformarMovimentacao({
     setQuantidade("");
     setObservacao("");
     setErro(null);
+    setRetirarTudo(false);
+  }
+
+  // Preenche valor/quantidade com o total da posição informada — chamado
+  // tanto ao marcar a caixa "Retirar tudo" quanto ao trocar o ativo
+  // selecionado enquanto ela já está marcada.
+  function preencherComTotalDaPosicao(posicaoId: string) {
+    const posicao = posicoes.find((p) => String(p.id) === posicaoId);
+    if (!posicao) return;
+    setValor(paraCampoDecimal(Number(posicao.valor_atual.toFixed(2))));
+    setQuantidade(paraCampoDecimal(posicao.quantidade));
+  }
+
+  function handlePosicaoChange(novoId: string) {
+    setPosicaoId(novoId);
+    if (retirarTudo) {
+      if (novoId) {
+        preencherComTotalDaPosicao(novoId);
+      } else {
+        setValor("");
+        setQuantidade("");
+      }
+    }
+  }
+
+  function handleRetirarTudoChange(marcado: boolean) {
+    setRetirarTudo(marcado);
+    if (marcado && posicaoId) {
+      preencherComTotalDaPosicao(posicaoId);
+    } else if (!marcado) {
+      setValor("");
+      setQuantidade("");
+    }
   }
 
   async function enviar() {
@@ -168,6 +213,7 @@ export default function InformarMovimentacao({
                 onClick={() => {
                   setTipo(t);
                   if (t === "retirada") setModo("existente");
+                  else handleRetirarTudoChange(false);
                 }}
                 className={`flex-1 rounded-xl border px-3 py-2 text-sm font-medium ${
                   tipo === t
@@ -200,28 +246,41 @@ export default function InformarMovimentacao({
           )}
 
           {modo === "existente" ? (
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
-                Ativo
-              </span>
-              <select
-                value={posicaoId}
-                onChange={(e) => setPosicaoId(e.target.value)}
-                className={inputClass}
-              >
-                <option value="">Selecione...</option>
-                {posicoes.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.ativo} ({p.classe})
-                  </option>
-                ))}
-              </select>
+            <div>
+              <label className="block">
+                <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
+                  Ativo
+                </span>
+                <select
+                  value={posicaoId}
+                  onChange={(e) => handlePosicaoChange(e.target.value)}
+                  className={inputClass}
+                >
+                  <option value="">Selecione...</option>
+                  {posicoes.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.ativo} ({p.classe})
+                    </option>
+                  ))}
+                </select>
+              </label>
               {posicoes.length === 0 && (
                 <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">
                   Você ainda não tem nenhum ativo cadastrado.
                 </p>
               )}
-            </label>
+              {tipo === "retirada" && posicaoId && (
+                <label className="mt-2 flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={retirarTudo}
+                    onChange={(e) => handleRetirarTudoChange(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 dark:border-white/20 text-[var(--color-accent)] focus:ring-[var(--color-accent-soft)]"
+                  />
+                  Retirar tudo desse ativo
+                </label>
+              )}
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <label className="block">
@@ -264,7 +323,8 @@ export default function InformarMovimentacao({
                 value={valor}
                 onChange={(e) => setValor(e.target.value)}
                 placeholder="0,00"
-                className={inputClass}
+                readOnly={retirarTudo}
+                className={`${inputClass} ${retirarTudo ? "opacity-60" : ""}`}
               />
             </label>
             <label className="block">
@@ -276,10 +336,16 @@ export default function InformarMovimentacao({
                 value={quantidade}
                 onChange={(e) => setQuantidade(e.target.value)}
                 placeholder="Só se souber as unidades"
-                className={inputClass}
+                readOnly={retirarTudo}
+                className={`${inputClass} ${retirarTudo ? "opacity-60" : ""}`}
               />
             </label>
           </div>
+          {retirarTudo && (
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              Preenchido automaticamente com o total desse ativo — desmarque a caixa acima pra digitar um valor diferente.
+            </p>
+          )}
 
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">
