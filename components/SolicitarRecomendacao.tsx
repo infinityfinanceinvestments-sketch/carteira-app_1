@@ -68,7 +68,7 @@ export default function SolicitarRecomendacao({
       <button
         type="button"
         onClick={() => setAberto(true)}
-        className="w-full rounded-3xl border border-dashed border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--color-navy-900)] p-4 text-left text-sm font-medium text-[var(--color-navy-950)] shadow-sm"
+        className="w-full rounded-3xl border border-dashed border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--color-navy-900)] p-4 text-left text-sm font-medium text-[var(--color-navy-950)] dark:text-white shadow-sm"
       >
         + Pedir uma recomendação ao seu consultor
       </button>
@@ -84,7 +84,7 @@ export default function SolicitarRecomendacao({
         placeholder="Alguma coisa específica que você quer que ele veja? (opcional)"
         rows={3}
         maxLength={500}
-        className="w-full rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs"
+        className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-transparent px-2 py-1.5 text-xs outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent-soft)]"
       />
       {erro && <p className="text-xs text-red-600">{erro}</p>}
       <div className="flex gap-2">

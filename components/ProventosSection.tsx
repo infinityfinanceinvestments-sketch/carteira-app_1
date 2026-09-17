@@ -299,7 +299,7 @@ export default function ProventosSection({
             aria-expanded={menuAberto}
             className={`relative rounded-xl border px-2 py-1.5 text-xs leading-none ${
               filtroLigado
-                ? "border-[var(--color-navy-950)] text-[var(--color-navy-950)]"
+                ? "border-[var(--color-navy-950)] text-[var(--color-navy-950)] dark:border-white dark:text-white"
                 : "border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400"
             }`}
           >
