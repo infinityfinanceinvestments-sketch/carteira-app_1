@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS proventos (
 CREATE TABLE IF NOT EXISTS notificacoes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
-  tipo TEXT NOT NULL CHECK (tipo IN ('recomendacao','variacao_preco','desvio_modelo','objetivo_concluido','movimentacao')),
+  tipo TEXT NOT NULL CHECK (tipo IN ('recomendacao','variacao_preco','desvio_modelo','objetivo_concluido','movimentacao','objetivo_criado')),
   titulo TEXT NOT NULL,
   mensagem TEXT NOT NULL,
   referencia_id INTEGER,
@@ -200,7 +200,13 @@ CREATE TABLE IF NOT EXISTS movimentacoes_pendentes (
 -- campo de texto livre preenchido no questionário de suitability — essa
 -- tabela é a aba "Objetivos" nova, com progresso e barra de progressão.
 -- tipo = 'quantidade_ativo': progresso calculado automaticamente somando a
---   quantidade em posição do `ativo` informado (ver lib/repo/objetivos.ts).
+--   quantidade em posição do `ativo` informado (ver lib/repo/objetivos.ts) —
+--   pensado pra ações/FIIs/ETFs/cripto, onde "quantidade de unidades" faz
+--   sentido como meta.
+-- tipo = 'valor_ativo': mesma ideia, mas somando o VALOR (R$) em posição do
+--   `ativo` em vez da quantidade — pensado pra Renda Fixa, onde a posição
+--   normalmente tem quantidade=1 (ver comentário em lib/movimentacoes.ts) e
+--   quem importa é o valor investido, não "unidades".
 -- tipo = 'valor_livre': meta manual — o consultor vai atualizando
 --   `progresso_manual` conforme o combinado com o cliente.
 CREATE TABLE IF NOT EXISTS objetivos (
@@ -208,7 +214,7 @@ CREATE TABLE IF NOT EXISTS objetivos (
   cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
   titulo TEXT NOT NULL,
   descricao TEXT,
-  tipo TEXT NOT NULL CHECK (tipo IN ('quantidade_ativo','valor_livre')),
+  tipo TEXT NOT NULL CHECK (tipo IN ('quantidade_ativo','valor_ativo','valor_livre')),
   ativo TEXT,
   meta_quantidade REAL,
   meta_valor REAL,

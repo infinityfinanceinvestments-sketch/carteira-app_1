@@ -43,6 +43,8 @@ function migrate(db: DatabaseSync) {
   migrarColunasIndexadorPosicoes(db);
   migrarColunaTelefoneClientes(db);
   migrarTipoNotificacaoMovimentacao(db);
+  migrarTipoNotificacaoObjetivoCriado(db);
+  migrarTipoObjetivoValorAtivo(db);
 
   const schemaPath = path.join(process.cwd(), "lib", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf-8");
@@ -219,6 +221,89 @@ function migrarTipoNotificacaoMovimentacao(db: DatabaseSync) {
       FROM notificacoes_old_migracao3
     `);
     db.exec(`DROP TABLE notificacoes_old_migracao3`);
+    db.exec("COMMIT");
+  } catch (erro) {
+    db.exec("ROLLBACK");
+    throw erro;
+  }
+}
+
+/** Adiciona 'objetivo_criado' ao CHECK de notificacoes.tipo — notifica o
+ *  cliente quando o consultor traça um objetivo novo (antes só notificava
+ *  quando o objetivo era CONCLUÍDO). */
+function migrarTipoNotificacaoObjetivoCriado(db: DatabaseSync) {
+  const tabela = db
+    .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'notificacoes'`)
+    .get() as { sql: string } | undefined;
+
+  if (!tabela) return; // banco novo — schema.sql abaixo já cria com o CHECK certo
+  if (tabela.sql.includes("objetivo_criado")) return; // já migrado
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(`ALTER TABLE notificacoes RENAME TO notificacoes_old_migracao4`);
+    db.exec(`
+      CREATE TABLE notificacoes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+        tipo TEXT NOT NULL CHECK (tipo IN ('recomendacao','variacao_preco','desvio_modelo','objetivo_concluido','movimentacao','objetivo_criado')),
+        titulo TEXT NOT NULL,
+        mensagem TEXT NOT NULL,
+        referencia_id INTEGER,
+        lida INTEGER NOT NULL DEFAULT 0,
+        criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    db.exec(`
+      INSERT INTO notificacoes (id, cliente_id, tipo, titulo, mensagem, referencia_id, lida, criado_em)
+      SELECT id, cliente_id, tipo, titulo, mensagem, referencia_id, lida, criado_em
+      FROM notificacoes_old_migracao4
+    `);
+    db.exec(`DROP TABLE notificacoes_old_migracao4`);
+    db.exec("COMMIT");
+  } catch (erro) {
+    db.exec("ROLLBACK");
+    throw erro;
+  }
+}
+
+/** Adiciona 'valor_ativo' ao CHECK de objetivos.tipo — meta automática de
+ *  VALOR (R$) numa posição específica, pra Renda Fixa (onde a posição tem
+ *  quantidade=1 e "quantidade de unidades" não faz sentido como meta; ver
+ *  'quantidade_ativo', que já existia, pra ações/FIIs/ETFs/cripto). */
+function migrarTipoObjetivoValorAtivo(db: DatabaseSync) {
+  const tabela = db
+    .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'objetivos'`)
+    .get() as { sql: string } | undefined;
+
+  if (!tabela) return; // banco novo — schema.sql abaixo já cria com o CHECK certo
+  if (tabela.sql.includes("valor_ativo")) return; // já migrado
+
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.exec(`ALTER TABLE objetivos RENAME TO objetivos_old_migracao`);
+    db.exec(`
+      CREATE TABLE objetivos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+        titulo TEXT NOT NULL,
+        descricao TEXT,
+        tipo TEXT NOT NULL CHECK (tipo IN ('quantidade_ativo','valor_ativo','valor_livre')),
+        ativo TEXT,
+        meta_quantidade REAL,
+        meta_valor REAL,
+        progresso_manual REAL NOT NULL DEFAULT 0,
+        concluido_em TEXT,
+        criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+        atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    db.exec(`
+      INSERT INTO objetivos (id, cliente_id, titulo, descricao, tipo, ativo, meta_quantidade, meta_valor, progresso_manual, concluido_em, criado_em, atualizado_em)
+      SELECT id, cliente_id, titulo, descricao, tipo, ativo, meta_quantidade, meta_valor, progresso_manual, concluido_em, criado_em, atualizado_em
+      FROM objetivos_old_migracao
+    `);
+    db.exec(`DROP TABLE objetivos_old_migracao`);
     db.exec("COMMIT");
   } catch (erro) {
     db.exec("ROLLBACK");

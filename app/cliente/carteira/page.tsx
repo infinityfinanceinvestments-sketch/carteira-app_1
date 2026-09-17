@@ -8,6 +8,7 @@ import {
   valorTotalCarteira,
   listarPontosIntradayDeHoje,
   listarMovimentacoesDoCliente,
+  listarNovidadesNaoLidas,
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComTodosBenchmarks } from "@/lib/rentabilidade";
 import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
@@ -18,6 +19,7 @@ import AlocacaoView from "@/components/AlocacaoView";
 import EvolutionChart from "@/components/EvolutionChart";
 import InformarMovimentacao from "@/components/InformarMovimentacao";
 import PosicoesAgrupadas from "@/components/PosicoesAgrupadas";
+import NovidadesPopup from "@/components/NovidadesPopup";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -53,6 +55,7 @@ export default async function MinhaCarteiraPage() {
   const historico = await obterHistoricoComTodosBenchmarks(cliente.id);
   const intraday = listarPontosIntradayDeHoje(cliente.id);
   const movimentacoes = listarMovimentacoesDoCliente(cliente.id);
+  const novidades = listarNovidadesNaoLidas(cliente.id);
 
   const primeiro = historico[0]?.valor_total ?? total;
   const variacao = primeiro > 0 ? ((total - primeiro) / primeiro) * 100 : 0;
@@ -128,6 +131,18 @@ export default async function MinhaCarteiraPage() {
         clienteId={cliente.id}
         posicoes={posicoes.map((p) => ({ id: p.id, ativo: p.ativo, classe: p.classe }))}
         movimentacoes={movimentacoes}
+      />
+
+      <NovidadesPopup
+        clienteId={cliente.id}
+        novidades={novidades
+          .filter((n) => n.tipo === "objetivo_criado" || n.tipo === "recomendacao")
+          .map((n) => ({
+            id: n.id,
+            tipo: n.tipo as "objetivo_criado" | "recomendacao",
+            titulo: n.titulo,
+            mensagem: n.mensagem,
+          }))}
       />
     </div>
   );

@@ -308,7 +308,7 @@ export default async function ClienteDetalhePage({
         <AreaEmConstrucao titulo="Proventos" icone="💰" />
       )}
 
-      <ObjetivosSection clienteId={clienteId} objetivosIniciais={objetivos} podeEditar />
+      <ObjetivosSection clienteId={clienteId} objetivosIniciais={objetivos} podeEditar posicoes={posicoes} />
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
         <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">

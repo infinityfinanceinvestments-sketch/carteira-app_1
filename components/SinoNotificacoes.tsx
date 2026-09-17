@@ -5,7 +5,13 @@ import { createPortal } from "react-dom";
 
 interface Notificacao {
   id: number;
-  tipo: "recomendacao" | "variacao_preco" | "desvio_modelo" | "objetivo_concluido" | "movimentacao";
+  tipo:
+    | "recomendacao"
+    | "variacao_preco"
+    | "desvio_modelo"
+    | "objetivo_concluido"
+    | "movimentacao"
+    | "objetivo_criado";
   titulo: string;
   mensagem: string;
   lida: number;

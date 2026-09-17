@@ -146,7 +146,8 @@ export type TipoNotificacao =
   | "variacao_preco"
   | "desvio_modelo"
   | "objetivo_concluido"
-  | "movimentacao";
+  | "movimentacao"
+  | "objetivo_criado";
 export interface Notificacao {
   id: number;
   cliente_id: number;
@@ -185,10 +186,13 @@ export interface SolicitacaoRecomendacao {
 // Meta gameficada (aba "Objetivos") — não confundir com `Cliente.objetivo`,
 // que é o texto livre do questionário de suitability. `tipo` decide qual
 // dupla de campos é usada: 'quantidade_ativo' usa `ativo`/`meta_quantidade`
-// (progresso calculado a partir das posições do cliente); 'valor_livre' usa
-// `meta_valor`/`progresso_manual` (progresso atualizado manualmente pelo
-// consultor). Ver lib/repo/objetivos.ts pro cálculo de progresso.
-export type TipoObjetivo = "quantidade_ativo" | "valor_livre";
+// (progresso = soma da QUANTIDADE em posição do ativo — ações/FIIs/ETFs/
+// cripto); 'valor_ativo' usa `ativo`/`meta_valor` (progresso = soma do VALOR
+// em posição do ativo — Renda Fixa, onde quantidade não é uma meta útil);
+// 'valor_livre' usa `meta_valor`/`progresso_manual` (progresso atualizado
+// manualmente pelo consultor, sem ligação com nenhuma posição). Ver
+// lib/repo/objetivos.ts pro cálculo de progresso.
+export type TipoObjetivo = "quantidade_ativo" | "valor_ativo" | "valor_livre";
 export interface Objetivo {
   id: number;
   cliente_id: number;

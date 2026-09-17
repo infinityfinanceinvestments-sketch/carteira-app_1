@@ -15,6 +15,24 @@ export function listarNotificacoesDoCliente(
   );
 }
 
+/** Novidades não lidas que merecem um popup na tela inicial do cliente (não
+ *  o sino, que junta tudo) — só objetivo novo e recomendação nova, os dois
+ *  tipos "acionáveis" que fazem sentido interromper o cliente na entrada do
+ *  app. Outros tipos (variacao_preco, desvio_modelo, movimentacao,
+ *  objetivo_concluido) continuam só no sino. */
+export function listarNovidadesNaoLidas(clienteId: number): Notificacao[] {
+  const db = getDb();
+  return plainRows(
+    db
+      .prepare(
+        `SELECT * FROM notificacoes
+         WHERE cliente_id = ? AND lida = 0 AND tipo IN ('objetivo_criado', 'recomendacao')
+         ORDER BY criado_em DESC`
+      )
+      .all(clienteId) as unknown as Notificacao[]
+  );
+}
+
 export function contarNotificacoesNaoLidas(clienteId: number): number {
   const db = getDb();
   const row = db

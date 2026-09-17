@@ -27,7 +27,7 @@ export function criarObjetivo(input: {
   cliente_id: number;
   titulo: string;
   descricao?: string | null;
-  tipo: "quantidade_ativo" | "valor_livre";
+  tipo: "quantidade_ativo" | "valor_ativo" | "valor_livre";
   ativo?: string | null;
   meta_quantidade?: number | null;
   meta_valor?: number | null;
@@ -114,8 +114,12 @@ function definirConclusao(objetivo: Objetivo, concluido: boolean): void {
 // ---------- Progresso ----------
 
 /** Calcula o progresso de um objetivo. Pra 'quantidade_ativo', soma a
- *  quantidade em posição do ativo informado (mesma normalização de ticker
- *  usada em consolidarPosicoes, então "BBAS3", "bbas3" etc. batem igual).
+ *  QUANTIDADE em posição do ativo informado (mesma normalização de ticker
+ *  usada em consolidarPosicoes, então "BBAS3", "bbas3" etc. batem igual) —
+ *  faz sentido pra ações/FIIs/ETFs/cripto. Pra 'valor_ativo', mesma ideia
+ *  mas somando o VALOR (R$) em posição em vez da quantidade — pensado pra
+ *  Renda Fixa, onde a posição normalmente tem quantidade=1 (ver
+ *  lib/movimentacoes.ts) e "quantidade de unidades" não seria uma meta útil.
  *  Pra 'valor_livre', o "valor atual" é só o progresso_manual que o
  *  consultor for atualizando. Também grava concluido_em na primeira vez que
  *  detecta >= 100%, e desfaz se o progresso cair de novo (ex: cliente vendeu
@@ -127,14 +131,18 @@ export function calcularProgressoObjetivo(
   let valorAtual: number;
   let meta: number;
 
-  if (objetivo.tipo === "quantidade_ativo") {
-    meta = objetivo.meta_quantidade ?? 0;
+  if (objetivo.tipo === "quantidade_ativo" || objetivo.tipo === "valor_ativo") {
     const posicoes =
       posicoesConsolidadas ?? consolidarPosicoes(listarPosicoesDoCliente(objetivo.cliente_id));
     const alvo = normalizarAtivoLocal(objetivo.ativo ?? "");
-    valorAtual = posicoes
-      .filter((p) => normalizarAtivoLocal(p.ativo) === alvo)
-      .reduce((soma, p) => soma + p.quantidade, 0);
+    const posicoesDoAtivo = posicoes.filter((p) => normalizarAtivoLocal(p.ativo) === alvo);
+    if (objetivo.tipo === "quantidade_ativo") {
+      meta = objetivo.meta_quantidade ?? 0;
+      valorAtual = posicoesDoAtivo.reduce((soma, p) => soma + p.quantidade, 0);
+    } else {
+      meta = objetivo.meta_valor ?? 0;
+      valorAtual = posicoesDoAtivo.reduce((soma, p) => soma + p.valor_atual, 0);
+    }
   } else {
     meta = objetivo.meta_valor ?? 0;
     valorAtual = objetivo.progresso_manual;

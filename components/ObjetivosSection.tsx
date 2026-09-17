@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useToast } from "./Toast";
 
-type TipoObjetivo = "quantidade_ativo" | "valor_livre";
+type TipoObjetivo = "quantidade_ativo" | "valor_ativo" | "valor_livre";
 
 interface Objetivo {
   id: number;
@@ -21,15 +21,40 @@ interface Objetivo {
   concluido: boolean;
 }
 
+// Posição que o cliente já tem — só o suficiente pro seletor "ativo que ele
+// já tem" e pra dica de quanto já foi acumulado (ver PosicaoResumo em
+// AlocacaoView.tsx/PosicoesAgrupadas.tsx, mesma forma).
+interface PosicaoParaObjetivo {
+  ativo: string;
+  classe: string;
+  quantidade: number;
+  valor_atual: number;
+}
+
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const formatQuantidade = (v: number) =>
   Number.isInteger(v) ? String(v) : v.toLocaleString("pt-BR", { maximumFractionDigits: 2 });
 
+function normalizarAtivo(ativo: string): string {
+  return ativo.trim().toUpperCase();
+}
+
+/** Tipo de objetivo sugerido a partir da classe da posição escolhida: Renda
+ *  Fixa normalmente tem quantidade=1 (o "custo total" vira o preço médio,
+ *  ver lib/movimentacoes.ts) — "quantidade de unidades" não é uma meta útil
+ *  ali, então sugere acompanhar por VALOR em vez de quantidade. */
+function tipoSugeridoParaClasse(classe: string): "quantidade_ativo" | "valor_ativo" {
+  return classe === "Renda Fixa" ? "valor_ativo" : "quantidade_ativo";
+}
+
 function descricaoProgresso(o: Objetivo): string {
   if (o.tipo === "quantidade_ativo") {
     return `${formatQuantidade(o.valorAtual)} de ${formatQuantidade(o.meta)} ${o.ativo ?? ""}`;
+  }
+  if (o.tipo === "valor_ativo") {
+    return `${formatBRL(o.valorAtual)} de ${formatBRL(o.meta)} em ${o.ativo ?? ""}`;
   }
   return `${formatBRL(o.valorAtual)} de ${formatBRL(o.meta)}`;
 }
@@ -42,10 +67,16 @@ export default function ObjetivosSection({
   clienteId,
   objetivosIniciais,
   podeEditar = false,
+  posicoes = [],
 }: {
   clienteId: number;
   objetivosIniciais: Objetivo[];
   podeEditar?: boolean;
+  /** Posições atuais do cliente — só usado (opcional) pro seletor "ativo que
+   *  ele já tem" no formulário de criação, pra não precisar digitar o
+   *  ticker na mão. Sem isso, o campo de ativo continua funcionando normal,
+   *  só digitado. */
+  posicoes?: PosicaoParaObjetivo[];
 }) {
   const { mostrarToast } = useToast();
   const [objetivos, setObjetivos] = useState(objetivosIniciais);
@@ -61,6 +92,28 @@ export default function ObjetivosSection({
   const [metaQuantidade, setMetaQuantidade] = useState("");
   const [metaValor, setMetaValor] = useState("");
   const [enviando, setEnviando] = useState(false);
+
+  // Posições ordenadas por valor (maior primeiro) pro seletor "ativo que
+  // ele já tem", e a posição que bate com o que está digitado no campo
+  // `ativo` agora — pra mostrar "ele já tem X disso" e pra continuar
+  // funcionando mesmo se o consultor digitar o ticker na mão em vez de usar
+  // o seletor (a dica aparece de qualquer jeito, contanto que o ticker
+  // bata com alguma posição real).
+  const posicoesOrdenadas = useMemo(
+    () => [...posicoes].sort((a, b) => b.valor_atual - a.valor_atual),
+    [posicoes]
+  );
+  const posicaoDoAtivoDigitado = useMemo(
+    () => posicoes.find((p) => normalizarAtivo(p.ativo) === normalizarAtivo(ativo)),
+    [posicoes, ativo]
+  );
+
+  function selecionarPosicaoExistente(ticker: string) {
+    const posicao = posicoes.find((p) => p.ativo === ticker);
+    if (!posicao) return;
+    setAtivo(posicao.ativo);
+    setTipo(tipoSugeridoParaClasse(posicao.classe));
+  }
 
   // Form de edição (reaproveita os mesmos campos, um objetivo por vez)
   const [edTitulo, setEdTitulo] = useState("");
@@ -102,6 +155,14 @@ export default function ObjetivosSection({
       }
       body.ativo = ativo.trim().toUpperCase();
       body.meta_quantidade = qtd;
+    } else if (tipo === "valor_ativo") {
+      const valor = Number(metaValor.replace(",", "."));
+      if (!ativo.trim() || !Number.isFinite(valor) || valor <= 0) {
+        setErro("Preencha o ativo e uma meta de valor válida.");
+        return;
+      }
+      body.ativo = ativo.trim().toUpperCase();
+      body.meta_valor = valor;
     } else {
       const valor = Number(metaValor.replace(",", "."));
       if (!Number.isFinite(valor) || valor <= 0) {
@@ -158,6 +219,14 @@ export default function ObjetivosSection({
       }
       body.ativo = edAtivo.trim().toUpperCase();
       body.meta_quantidade = qtd;
+    } else if (objetivoAtual.tipo === "valor_ativo") {
+      const valor = Number(edMetaValor.replace(",", "."));
+      if (!edAtivo.trim() || !Number.isFinite(valor) || valor <= 0) {
+        setErro("Preencha o ativo e uma meta de valor válida.");
+        return;
+      }
+      body.ativo = edAtivo.trim().toUpperCase();
+      body.meta_valor = valor;
     } else {
       const valor = Number(edMetaValor.replace(",", "."));
       if (!Number.isFinite(valor) || valor <= 0) {
@@ -244,13 +313,28 @@ export default function ObjetivosSection({
             className="w-full rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs"
           >
             <option value="quantidade_ativo">Acumular quantidade de um ativo</option>
+            <option value="valor_ativo">Acumular valor (R$) em um ativo (ex: Renda Fixa)</option>
             <option value="valor_livre">Meta de valor (livre)</option>
           </select>
           <p className="text-[11px] text-slate-400 dark:text-slate-500">
-            {tipo === "quantidade_ativo"
+            {tipo !== "valor_livre"
               ? "O progresso é automático: atualiza sozinho com a posição real do cliente nesse ativo, sem precisar mexer depois."
               : "Meta livre: o progresso não vem de uma posição específica, então você atualiza o valor atual manualmente quando quiser."}
           </p>
+          {tipo !== "valor_livre" && posicoesOrdenadas.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => e.target.value && selecionarPosicaoExistente(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs text-slate-500 dark:text-slate-400"
+            >
+              <option value="">Selecionar um ativo que o cliente já tem...</option>
+              {posicoesOrdenadas.map((p) => (
+                <option key={p.ativo} value={p.ativo}>
+                  {p.ativo} — {p.classe} ({formatBRL(p.valor_atual)})
+                </option>
+              ))}
+            </select>
+          )}
           {tipo === "quantidade_ativo" ? (
             <div className="grid grid-cols-2 gap-2">
               <input
@@ -267,6 +351,22 @@ export default function ObjetivosSection({
                 className="rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs"
               />
             </div>
+          ) : tipo === "valor_ativo" ? (
+            <div className="grid grid-cols-2 gap-2">
+              <input
+                value={ativo}
+                onChange={(e) => setAtivo(e.target.value)}
+                placeholder="Ativo (ex: CDB Banco X)"
+                className="rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs uppercase"
+              />
+              <input
+                value={metaValor}
+                onChange={(e) => setMetaValor(e.target.value)}
+                placeholder="Meta (R$)"
+                inputMode="decimal"
+                className="rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs"
+              />
+            </div>
           ) : (
             <input
               value={metaValor}
@@ -275,6 +375,13 @@ export default function ObjetivosSection({
               inputMode="decimal"
               className="w-full rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs"
             />
+          )}
+          {tipo !== "valor_livre" && posicaoDoAtivoDigitado && (
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+              {tipo === "quantidade_ativo"
+                ? `O cliente já tem ${formatQuantidade(posicaoDoAtivoDigitado.quantidade)} unidades desse ativo.`
+                : `O cliente já tem ${formatBRL(posicaoDoAtivoDigitado.valor_atual)} investidos nesse ativo.`}
+            </p>
           )}
           <button
             type="submit"
@@ -311,7 +418,7 @@ export default function ObjetivosSection({
                     className="w-full rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs"
                   />
                   <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                    {o.tipo === "quantidade_ativo"
+                    {o.tipo !== "valor_livre"
                       ? "Progresso automático — atualiza sozinho com a posição real do cliente nesse ativo."
                       : "Meta livre — o progresso atual abaixo é atualizado manualmente."}
                   </p>
@@ -327,6 +434,22 @@ export default function ObjetivosSection({
                         value={edMetaQuantidade}
                         onChange={(e) => setEdMetaQuantidade(e.target.value)}
                         placeholder="Meta (quantidade)"
+                        inputMode="decimal"
+                        className="rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs"
+                      />
+                    </div>
+                  ) : o.tipo === "valor_ativo" ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        value={edAtivo}
+                        onChange={(e) => setEdAtivo(e.target.value)}
+                        placeholder="Ativo"
+                        className="rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs uppercase"
+                      />
+                      <input
+                        value={edMetaValor}
+                        onChange={(e) => setEdMetaValor(e.target.value)}
+                        placeholder="Meta (R$)"
                         inputMode="decimal"
                         className="rounded-xl border border-slate-200 dark:border-white/10 px-2 py-1.5 text-xs"
                       />
