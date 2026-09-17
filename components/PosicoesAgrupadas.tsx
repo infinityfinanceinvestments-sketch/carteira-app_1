@@ -17,6 +17,12 @@ interface PosicaoResumo {
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+// Quantidade pode ser fracionária (ex: cripto — 0,15 BTC), então não dá pra
+// simplesmente arredondar pra inteiro; mas quando é um número redondo (a
+// maioria — ações, FIIs, ETFs) não queremos ficar mostrando ",00" à toa.
+const formatQuantidade = (v: number) =>
+  Number.isInteger(v) ? String(v) : v.toLocaleString("pt-BR", { maximumFractionDigits: 8 });
+
 /** Seção "Posições" da carteira do cliente: em vez da tabela plana com uma
  *  linha por ativo (difícil de ler numa tela de celular quando o cliente
  *  tem muitos papéis), agrupa por classe num menu suspenso — cada classe
@@ -102,7 +108,7 @@ export default function PosicoesAgrupadas({ posicoes }: { posicoes: PosicaoResum
                           {p.ativo}
                         </span>
                         <span className="block text-[10px] text-slate-400 dark:text-slate-500">
-                          Preço médio: {formatBRL(p.preco_medio)}
+                          {formatQuantidade(p.quantidade)} un. · Preço médio: {formatBRL(p.preco_medio)}
                         </span>
                       </span>
                       <span className="shrink-0 text-right">
