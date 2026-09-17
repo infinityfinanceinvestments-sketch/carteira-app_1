@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { agruparAlocacao, agruparComRentabilidade, grupoDaClasse } from "./gruposAtivo";
+import {
+  agruparAlocacao,
+  agruparComRentabilidade,
+  agruparPosicoesComRentabilidade,
+  grupoDaClasse,
+} from "./gruposAtivo";
 
 describe("grupoDaClasse", () => {
   it("mapeia as classes técnicas pros grupos enxutos pedidos pelo cliente", () => {
@@ -88,5 +93,41 @@ describe("agruparComRentabilidade", () => {
       { classe: "Renda Fixa", quantidade: 1, preco_medio: 100, valor_atual: 100 },
     ]);
     expect(resultado.map((g) => g.grupo)).toEqual(["Renda Fixa", "Ações"]);
+  });
+});
+
+describe("agruparPosicoesComRentabilidade", () => {
+  const posicoes = [
+    { id: 1, classe: "Ações", quantidade: 100, preco_medio: 10, valor_atual: 1200 },
+    { id: 2, classe: "Ações", quantidade: 10, preco_medio: 5, valor_atual: 40 },
+    { id: 3, classe: "ETFs", quantidade: 10, preco_medio: 10, valor_atual: 90 },
+  ];
+
+  it("agrupa as posições, mantendo os itens individuais dentro de cada grupo", () => {
+    const resultado = agruparPosicoesComRentabilidade(posicoes);
+    expect(resultado.map((g) => g.grupo)).toEqual(["Ações", "Exterior"]);
+
+    const acoes = resultado.find((g) => g.grupo === "Ações")!;
+    expect(acoes.valor).toBe(1240);
+    expect(acoes.itens.map((p) => p.id)).toEqual([1, 2]); // ordenado por valor decrescente
+    // custo total = 1000 + 50 = 1050, valor = 1240
+    expect(acoes.rentabilidadePercentual).toBeCloseTo(((1240 - 1050) / 1050) * 100);
+
+    const exterior = resultado.find((g) => g.grupo === "Exterior")!;
+    expect(exterior.itens.map((p) => p.id)).toEqual([3]);
+  });
+
+  it("bate com o valor e a rentabilidade de agruparComRentabilidade pro mesmo grupo", () => {
+    const comItens = agruparPosicoesComRentabilidade(posicoes);
+    const soRentabilidade = agruparComRentabilidade(posicoes);
+    for (const grupo of comItens) {
+      const equivalente = soRentabilidade.find((g) => g.grupo === grupo.grupo)!;
+      expect(grupo.valor).toBe(equivalente.valor);
+      expect(grupo.rentabilidadePercentual).toBe(equivalente.rentabilidadePercentual);
+    }
+  });
+
+  it("não quebra com lista vazia", () => {
+    expect(agruparPosicoesComRentabilidade([])).toEqual([]);
   });
 });

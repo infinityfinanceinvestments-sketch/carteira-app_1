@@ -89,3 +89,40 @@ export function agruparComRentabilidade(
     }))
     .sort((a, b) => b.valor - a.valor);
 }
+
+export interface GrupoComPosicoes<T> {
+  grupo: string;
+  valor: number;
+  rentabilidadePercentual: number | null;
+  /** Posições do grupo, ordenadas por valor atual decrescente. */
+  itens: T[];
+}
+
+/** Mesmo agrupamento de `agruparComRentabilidade`, mas devolvendo também as
+ *  posições individuais de cada grupo (ordenadas por valor) — usado nas
+ *  telas que precisam abrir/expandir o grupo pra ver os ativos por trás do
+ *  número consolidado (ver AlocacaoView.tsx e PosicoesAgrupadas.tsx). */
+export function agruparPosicoesComRentabilidade<
+  T extends PosicaoParaAgrupamento & { id: number },
+>(posicoes: T[]): GrupoComPosicoes<T>[] {
+  const porGrupo = new Map<string, T[]>();
+  for (const p of posicoes) {
+    const grupo = grupoDaClasse(p.classe);
+    if (!porGrupo.has(grupo)) porGrupo.set(grupo, []);
+    porGrupo.get(grupo)!.push(p);
+  }
+  const rentabilidades = new Map(
+    agruparComRentabilidade(posicoes).map((g) => [g.grupo, g])
+  );
+  return [...porGrupo.entries()]
+    .map(([grupo, itens]) => {
+      const info = rentabilidades.get(grupo)!;
+      return {
+        grupo,
+        valor: info.valor,
+        rentabilidadePercentual: info.rentabilidadePercentual,
+        itens: itens.slice().sort((a, b) => b.valor_atual - a.valor_atual),
+      };
+    })
+    .sort((a, b) => b.valor - a.valor);
+}

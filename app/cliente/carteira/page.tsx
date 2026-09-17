@@ -17,6 +17,7 @@ import type { Indicador } from "@/lib/indices";
 import AlocacaoView from "@/components/AlocacaoView";
 import EvolutionChart from "@/components/EvolutionChart";
 import InformarMovimentacao from "@/components/InformarMovimentacao";
+import PosicoesAgrupadas from "@/components/PosicoesAgrupadas";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -120,36 +121,7 @@ export default async function MinhaCarteiraPage() {
             </a>
           )}
         </div>
-        {posicoes.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-slate-500">
-            Seu consultor ainda não carregou posições na sua carteira.
-          </p>
-        ) : (
-          <div className="scroll-x -mx-1">
-            <table className="w-full min-w-[380px] text-left text-xs">
-              <thead>
-                <tr className="text-slate-400 dark:text-slate-500">
-                  <th className="px-1 py-1.5 font-medium">Ativo</th>
-                  <th className="px-1 py-1.5 font-medium">Classe</th>
-                  <th className="px-1 py-1.5 text-right font-medium">Valor atual</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/10">
-                {posicoes.map((p) => (
-                  <tr key={p.id}>
-                    <td className="px-1 py-1.5 font-medium text-slate-800 dark:text-slate-100">
-                      {p.ativo}
-                    </td>
-                    <td className="px-1 py-1.5 text-slate-500 dark:text-slate-400">{p.classe}</td>
-                    <td className="px-1 py-1.5 text-right text-slate-800 dark:text-slate-100">
-                      {formatBRL(p.valor_atual)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <PosicoesAgrupadas posicoes={posicoes} />
       </section>
 
       <InformarMovimentacao

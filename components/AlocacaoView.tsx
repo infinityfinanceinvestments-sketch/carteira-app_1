@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import AllocationDonut, { type AlocacaoItem } from "./AllocationDonut";
-import { agruparAlocacao, agruparComRentabilidade, grupoDaClasse } from "@/lib/gruposAtivo";
+import { agruparAlocacao, agruparPosicoesComRentabilidade } from "@/lib/gruposAtivo";
 import { corDaClasse } from "@/lib/colors";
 import VariacaoBadge, { formatPercent } from "@/components/VariacaoBadge";
 
@@ -36,36 +36,16 @@ export default function AlocacaoView({
 
   const alocacaoAgrupada = useMemo(() => agruparAlocacao(alocacao), [alocacao]);
 
-  // Rentabilidade por grupo (custo = quantidade * preço médio de cada
-  // posição, comparado ao valor atual) — ver lib/gruposAtivo.ts.
-  const rentabilidadePorGrupo = useMemo(() => {
-    const mapa = new Map<string, number | null>();
-    for (const g of agruparComRentabilidade(posicoes)) {
-      mapa.set(g.grupo, g.rentabilidadePercentual);
-    }
-    return mapa;
-  }, [posicoes]);
-
+  // Mesmo agrupamento (com rentabilidade) usado na seção "Posições" — ver
+  // lib/gruposAtivo.ts. Só falta o percentual sobre o total, calculado
+  // aqui em cima do valor total das posições.
   const grupos = useMemo(() => {
-    const porGrupo = new Map<string, { valor: number; itens: PosicaoResumo[] }>();
-    for (const p of posicoes) {
-      const grupo = grupoDaClasse(p.classe);
-      if (!porGrupo.has(grupo)) porGrupo.set(grupo, { valor: 0, itens: [] });
-      const entrada = porGrupo.get(grupo)!;
-      entrada.valor += p.valor_atual;
-      entrada.itens.push(p);
-    }
     const totalValor = posicoes.reduce((soma, p) => soma + p.valor_atual, 0);
-    return [...porGrupo.entries()]
-      .map(([grupo, dados]) => ({
-        grupo,
-        valor: dados.valor,
-        itens: dados.itens,
-        percentualDoTotal: totalValor > 0 ? (dados.valor / totalValor) * 100 : 0,
-        rentabilidadePercentual: rentabilidadePorGrupo.get(grupo) ?? null,
-      }))
-      .sort((a, b) => b.valor - a.valor);
-  }, [posicoes, rentabilidadePorGrupo]);
+    return agruparPosicoesComRentabilidade(posicoes).map((g) => ({
+      ...g,
+      percentualDoTotal: totalValor > 0 ? (g.valor / totalValor) * 100 : 0,
+    }));
+  }, [posicoes]);
 
   return (
     <div>
@@ -120,19 +100,17 @@ export default function AlocacaoView({
                   </span>
                 </span>
               </div>
+              {/* já vem ordenado por valor decrescente (agruparPosicoesComRentabilidade) */}
               <ul className="space-y-1 pl-[18px]">
-                {itens
-                  .slice()
-                  .sort((a, b) => b.valor_atual - a.valor_atual)
-                  .map((p) => (
-                    <li
-                      key={p.id}
-                      className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
-                    >
-                      <span>{p.ativo}</span>
-                      <span>{formatBRL(p.valor_atual)}</span>
-                    </li>
-                  ))}
+                {itens.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
+                  >
+                    <span>{p.ativo}</span>
+                    <span>{formatBRL(p.valor_atual)}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           ))}
