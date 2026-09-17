@@ -23,3 +23,4 @@ export * from "./repo/notificacoes";
 export * from "./repo/objetivos";
 export * from "./repo/indices";
 export * from "./repo/dois-fatores";
+export * from "./repo/recados";

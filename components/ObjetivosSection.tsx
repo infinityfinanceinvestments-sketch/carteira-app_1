@@ -59,6 +59,38 @@ function descricaoProgresso(o: Objetivo): string {
   return `${formatBRL(o.valorAtual)} de ${formatBRL(o.meta)}`;
 }
 
+// Simulação simples de "quantos meses até a meta" dado um aporte mensal
+// (na mesma unidade do progresso — R$ pra valor_ativo/valor_livre,
+// quantidade de unidades pra quantidade_ativo) e uma rentabilidade mensal
+// esperada opcional (%, aplicada sobre o que já foi acumulado, tipo juros
+// compostos). Não mexe em nada real — é só uma projeção client-side pro
+// cliente/consultor terem uma ideia, sem chamar a API. Devolve null quando
+// a meta nunca é atingida nesse ritmo (aporte e rentabilidade ambos zerados,
+// ou levaria mais de 50 anos).
+const LIMITE_MESES_SIMULACAO = 600;
+function simularMesesAteAMeta(
+  atual: number,
+  meta: number,
+  aporteMensal: number,
+  taxaMensalPercentual: number
+): number | null {
+  if (atual >= meta) return 0;
+  if (aporteMensal <= 0 && taxaMensalPercentual <= 0) return null;
+  const taxa = taxaMensalPercentual / 100;
+  let valor = atual;
+  for (let mes = 1; mes <= LIMITE_MESES_SIMULACAO; mes++) {
+    valor = valor * (1 + taxa) + aporteMensal;
+    if (valor >= meta) return mes;
+  }
+  return null;
+}
+
+function formatDataFutura(meses: number): string {
+  const data = new Date();
+  data.setMonth(data.getMonth() + meses);
+  return data.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+}
+
 /** Gerencia (consultor) ou mostra (cliente) os objetivos/metas gameficadas
  *  do cliente — mesmo endpoint que o app Android usa
  *  (GET/POST /api/clientes/[id]/objetivos, PATCH/DELETE /api/objetivos/[id]).
@@ -83,6 +115,13 @@ export default function ObjetivosSection({
   const [mostrarForm, setMostrarForm] = useState(false);
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+
+  // Simulador de objetivo ("em quantos meses eu chego lá?") — puramente
+  // client-side, ver simularMesesAteAMeta acima. Um objetivo aberto por vez;
+  // os valores digitados ficam por id pra não se perderem ao abrir/fechar.
+  const [simuladorAbertoId, setSimuladorAbertoId] = useState<number | null>(null);
+  const [aporteSimulado, setAporteSimulado] = useState<Record<number, string>>({});
+  const [taxaSimulada, setTaxaSimulada] = useState<Record<number, string>>({});
 
   // Form de criação
   const [titulo, setTitulo] = useState("");
@@ -537,6 +576,92 @@ export default function ObjetivosSection({
                       {o.progressoPercentual.toFixed(0)}%
                     </span>
                   </div>
+
+                  {!o.concluido && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSimuladorAbertoId((atual) => (atual === o.id ? null : o.id))
+                        }
+                        className="text-[11px] font-medium text-[var(--color-navy-700)] dark:text-[var(--color-sky)]"
+                      >
+                        {simuladorAbertoId === o.id ? "Fechar simulador" : "📊 Simular quando eu chego lá"}
+                      </button>
+
+                      {simuladorAbertoId === o.id && (
+                        <div className="mt-2 space-y-2 rounded-xl bg-slate-50 dark:bg-white/5 p-3">
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className="block">
+                              <span className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
+                                Aporte mensal {o.tipo === "quantidade_ativo" ? "(unidades)" : "(R$)"}
+                              </span>
+                              <input
+                                inputMode="decimal"
+                                value={aporteSimulado[o.id] ?? ""}
+                                onChange={(e) =>
+                                  setAporteSimulado((prev) => ({ ...prev, [o.id]: e.target.value }))
+                                }
+                                placeholder="0"
+                                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-transparent px-2 py-1.5 text-xs"
+                              />
+                            </label>
+                            <label className="block">
+                              <span className="mb-1 block text-[11px] text-slate-500 dark:text-slate-400">
+                                Rentabilidade mensal (%, opcional)
+                              </span>
+                              <input
+                                inputMode="decimal"
+                                value={taxaSimulada[o.id] ?? ""}
+                                onChange={(e) =>
+                                  setTaxaSimulada((prev) => ({ ...prev, [o.id]: e.target.value }))
+                                }
+                                placeholder="0"
+                                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-transparent px-2 py-1.5 text-xs"
+                              />
+                            </label>
+                          </div>
+                          {(() => {
+                            const aporte = Number((aporteSimulado[o.id] ?? "0").replace(",", "."));
+                            const taxa = Number((taxaSimulada[o.id] ?? "0").replace(",", "."));
+                            if (!Number.isFinite(aporte) || !Number.isFinite(taxa)) {
+                              return (
+                                <p className="text-[11px] text-red-600">Valores inválidos.</p>
+                              );
+                            }
+                            if (aporte <= 0 && taxa <= 0) {
+                              return (
+                                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                                  Informe um aporte mensal e/ou uma rentabilidade esperada pra simular.
+                                </p>
+                              );
+                            }
+                            const meses = simularMesesAteAMeta(o.valorAtual, o.meta, aporte, taxa);
+                            if (meses === null) {
+                              return (
+                                <p className="text-[11px] text-amber-600 dark:text-amber-400">
+                                  Nesse ritmo, a meta não é atingida em até 50 anos.
+                                </p>
+                              );
+                            }
+                            if (meses === 0) {
+                              return (
+                                <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                  A meta já foi atingida!
+                                </p>
+                              );
+                            }
+                            return (
+                              <p className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                                Nesse ritmo, a meta é atingida em ~{meses}{" "}
+                                {meses === 1 ? "mês" : "meses"} (por volta de {formatDataFutura(meses)}).
+                              </p>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
               )}
             </li>

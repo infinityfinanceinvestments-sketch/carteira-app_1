@@ -217,6 +217,15 @@ export interface ObjetivoComProgresso extends Objetivo {
   concluido: boolean;
 }
 
+// Recado do consultor pros clientes dele (mural tipo mini-informativo) —
+// broadcast por consultor_id, não por cliente. Ver lib/repo/recados.ts.
+export interface Recado {
+  id: number;
+  consultor_id: number;
+  mensagem: string;
+  criado_em: string;
+}
+
 // Pedido do cliente de informar um aporte ou retirada — ver
 // movimentacoes_pendentes no schema e lib/repo/movimentacoes.ts.
 export type TipoMovimentacao = "aporte" | "retirada";

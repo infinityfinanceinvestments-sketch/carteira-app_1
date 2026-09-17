@@ -9,6 +9,7 @@ import {
   listarPontosIntradayDeHoje,
   listarMovimentacoesDoCliente,
   listarNovidadesNaoLidas,
+  listarRecadosDoConsultor,
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComTodosBenchmarks } from "@/lib/rentabilidade";
 import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
@@ -20,6 +21,7 @@ import EvolutionChart from "@/components/EvolutionChart";
 import InformarMovimentacao from "@/components/InformarMovimentacao";
 import PosicoesAgrupadas from "@/components/PosicoesAgrupadas";
 import NovidadesPopup from "@/components/NovidadesPopup";
+import RecadosCliente from "@/components/RecadosCliente";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -56,6 +58,7 @@ export default async function MinhaCarteiraPage() {
   const intraday = listarPontosIntradayDeHoje(cliente.id);
   const movimentacoes = listarMovimentacoesDoCliente(cliente.id);
   const novidades = listarNovidadesNaoLidas(cliente.id);
+  const recados = cliente.consultor_id ? listarRecadosDoConsultor(cliente.consultor_id) : [];
 
   const primeiro = historico[0]?.valor_total ?? total;
   const variacao = primeiro > 0 ? ((total - primeiro) / primeiro) * 100 : 0;
@@ -95,6 +98,8 @@ export default async function MinhaCarteiraPage() {
           </p>
         )}
       </section>
+
+      <RecadosCliente recados={recados} />
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
         <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">Evolução</h2>

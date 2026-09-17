@@ -263,6 +263,18 @@ CREATE TABLE IF NOT EXISTS dispositivos_confiaveis (
   ultimo_uso_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Mural simples de recados do consultor pros clientes dele (ex: "mercado
+-- caiu hoje por causa de X, mantenham a calma") — inspirado no conteúdo
+-- editorial que apps como XP/BTG colocam dentro do próprio app. É
+-- broadcast: um recado é visível por TODOS os clientes daquele consultor
+-- (filtra por `consultor_id`, não por `cliente_id` — não é por cliente).
+CREATE TABLE IF NOT EXISTS recados (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  consultor_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  mensagem TEXT NOT NULL,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Índices nas colunas de chave estrangeira mais consultadas — as tabelas já
 -- nasceram com PRIMARY KEY (indexado automaticamente) e a UNIQUE de
 -- favoritos_mercado (que o SQLite também indexa sozinho), mas nenhuma FK
@@ -290,3 +302,4 @@ CREATE INDEX IF NOT EXISTS idx_objetivos_cliente_id ON objetivos(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_codigos_verificacao_login_usuario_id ON codigos_verificacao_login(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_dispositivos_confiaveis_usuario_id ON dispositivos_confiaveis(usuario_id);
 -- token_hash já é UNIQUE (SQLite indexa automaticamente), não precisa de índice à parte.
+CREATE INDEX IF NOT EXISTS idx_recados_consultor_id ON recados(consultor_id);

@@ -1,17 +1,21 @@
 import Link from "next/link";
+import { getSessao } from "@/lib/auth";
 import {
   listarClientes,
   valorTotalCarteira,
   listarTodasRecomendacoesPendentes,
   listarTodasMovimentacoesPendentes,
   desvioVsCarteiraModelo,
+  listarRecadosDoConsultor,
 } from "@/lib/repo";
 import StatusBadge from "@/components/StatusBadge";
+import RecadosConsultor from "@/components/RecadosConsultor";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default async function DashboardPage() {
+  const sessao = await getSessao();
   const clientes = listarClientes();
   const patrimonios = clientes.map((c) => ({
     cliente: c,
@@ -33,6 +37,8 @@ export default async function DashboardPage() {
     .filter((d) => Math.abs(d.maiorDesvio) >= 5)
     .sort((a, b) => Math.abs(b.maiorDesvio) - Math.abs(a.maiorDesvio))
     .slice(0, 3);
+
+  const recados = sessao ? listarRecadosDoConsultor(sessao.userId) : [];
 
   return (
     <div className="space-y-5">
@@ -75,6 +81,8 @@ export default async function DashboardPage() {
         <p className="text-sm font-semibold">+ Novo cliente</p>
         <p className="text-xs text-white/70">Cadastrar agora</p>
       </Link>
+
+      <RecadosConsultor recados={recados} />
 
       {movimentacoesPendentes.length > 0 && (
         <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-amber-200 dark:ring-amber-500/30">
