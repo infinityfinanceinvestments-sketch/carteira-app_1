@@ -523,8 +523,8 @@ export default function ObjetivosSection({
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
                     <div
-                      className={`h-2 rounded-full ${
-                        o.concluido ? "bg-emerald-500" : "bg-[var(--color-navy-950)]"
+                      className={`h-2 rounded-full transition-[width] duration-700 ease-out ${
+                        o.concluido ? "bg-emerald-500" : "bg-emerald-400"
                       }`}
                       style={{ width: `${Math.min(100, Math.max(0, o.progressoPercentual))}%` }}
                     />

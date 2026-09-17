@@ -91,16 +91,29 @@ export default function PosicoesAgrupadas({ posicoes }: { posicoes: PosicaoResum
               </span>
             </button>
             {aberto && (
-              <ul className="space-y-1 pb-3 pl-[18px]">
-                {itens.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400"
-                  >
-                    <span>{p.ativo}</span>
-                    <span>{formatBRL(p.valor_atual)}</span>
-                  </li>
-                ))}
+              <ul className="space-y-2 pb-3 pl-[18px]">
+                {itens.map((p) => {
+                  const custo = p.quantidade * p.preco_medio;
+                  const rentabilidade = custo > 0 ? ((p.valor_atual - custo) / custo) * 100 : null;
+                  return (
+                    <li key={p.id} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="min-w-0">
+                        <span className="block truncate text-slate-600 dark:text-slate-300">
+                          {p.ativo}
+                        </span>
+                        <span className="block text-[10px] text-slate-400 dark:text-slate-500">
+                          Preço médio: {formatBRL(p.preco_medio)}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-right">
+                        <span className="block text-slate-500 dark:text-slate-400">
+                          {formatBRL(p.valor_atual)}
+                        </span>
+                        <VariacaoBadge valor={rentabilidade} />
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
