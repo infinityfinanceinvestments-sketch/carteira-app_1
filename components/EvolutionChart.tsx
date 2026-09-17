@@ -11,11 +11,16 @@ import {
   CartesianGrid,
 } from "recharts";
 import { formatHoraBr } from "@/lib/formatacao";
+import { INDICADORES_VALIDOS, LABEL_INDICADOR, type Indicador } from "@/lib/indicadores";
 
 export interface PontoEvolucao {
   data: string;
   valor_total: number;
-  valor_benchmark: number | null;
+  /** Valor de cada indicador (CDI/IPCA/Ibovespa/S&P 500) reescalado pra
+   *  mesma escala em reais da carteira nesse ponto — ver
+   *  obterHistoricoComTodosBenchmarks em lib/rentabilidade.ts. Indicador
+   *  ausente ou null = não foi possível calcular esse ponto. */
+  benchmarks: Partial<Record<Indicador, number | null>>;
 }
 
 // Ponto intraday (ver lib/intraday.ts) — só existe pro filtro "1D": um
@@ -98,15 +103,20 @@ function filtrarPorPeriodo(dados: PontoEvolucao[], dias: number | null): PontoEv
 export default function EvolutionChart({
   dados,
   intraday,
-  benchmarkLabel,
+  benchmarkPadrao,
 }: {
   dados: PontoEvolucao[];
   /** Pontos de hoje pro filtro "1D" (ver lib/intraday.ts). Opcional — sem
    *  isso, "1D" só mostra a mensagem de "sem pontos suficientes". */
   intraday?: PontoIntraday[];
-  benchmarkLabel?: string;
+  /** Indicador selecionado de início no seletor de benchmark — normalmente
+   *  o benchmark configurado no cadastro do cliente (cliente.benchmark).
+   *  O cliente pode trocar pra qualquer um dos 4 na hora, sem recarregar
+   *  nada, já que todos já vêm calculados em `dados`. */
+  benchmarkPadrao?: Indicador;
 }) {
   const [periodo, setPeriodo] = useState<Periodo>("tudo");
+  const [indicador, setIndicador] = useState<Indicador>(benchmarkPadrao ?? "CDI");
   const eIntraday = periodo === "1d";
 
   const dadosFiltrados = useMemo(() => {
@@ -125,6 +135,7 @@ export default function EvolutionChart({
       }))
     : dadosFiltrados.map((d) => ({
         ...d,
+        valor_benchmark: d.benchmarks[indicador] ?? null,
         label: usarDiaMes ? formatDiaMes(d.data) : formatMesAno(d.data),
       }));
 
@@ -146,6 +157,26 @@ export default function EvolutionChart({
           </button>
         ))}
       </div>
+
+      {!eIntraday && (
+        <div className="mb-2 flex flex-wrap items-center gap-1">
+          <span className="text-[11px] text-slate-400 dark:text-slate-500">Comparar com:</span>
+          {INDICADORES_VALIDOS.map((ind) => (
+            <button
+              key={ind}
+              type="button"
+              onClick={() => setIndicador(ind)}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                indicador === ind
+                  ? "bg-slate-500 text-white dark:bg-white/20"
+                  : "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10"
+              }`}
+            >
+              {LABEL_INDICADOR[ind]}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!eIntraday && dados.length < 2 ? (
         <div className="flex h-56 items-center justify-center text-sm text-slate-400 dark:text-slate-500">
@@ -179,7 +210,7 @@ export default function EvolutionChart({
               <Tooltip
                 formatter={(value, name) => [
                   formatBRLCompact(Number(value ?? 0)),
-                  name === "valor_total" ? "Carteira" : benchmarkLabel ?? "Benchmark",
+                  name === "valor_total" ? "Carteira" : LABEL_INDICADOR[indicador],
                 ]}
                 labelFormatter={(label) => label}
                 contentStyle={{

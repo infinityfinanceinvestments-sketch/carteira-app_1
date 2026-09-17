@@ -8,6 +8,14 @@ export const CLASS_COLORS: Record<string, string> = {
   ETFs: "#2b8fc0",
   "Moeda Estrangeira": "#b3455a",
   Cripto: "#6b7280",
+  // Rótulos dos GRUPOS usados na tela de alocação do cliente (ver
+  // lib/gruposAtivo.ts) — mais enxutos que as 7 classes técnicas acima
+  // (que continuam servindo as carteiras-modelo/desvio). "Fundos
+  // Imobiliários" reaproveita o tom de FIIs e "Exterior" o de ETFs, já
+  // que são a mesma família de ativo só com nome mais claro pro cliente.
+  "Fundos Imobiliários": "#7c5cbf",
+  Exterior: "#2b8fc0",
+  Criptoativos: "#6b7280",
 };
 
 export function corDaClasse(classe: string): string {

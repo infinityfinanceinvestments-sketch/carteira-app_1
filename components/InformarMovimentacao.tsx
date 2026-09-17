@@ -150,7 +150,7 @@ export default function InformarMovimentacao({
         <button
           type="button"
           onClick={() => setAberto(true)}
-          className="w-full rounded-3xl border border-dashed border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--color-navy-900)] p-4 text-left text-sm font-medium text-[var(--color-navy-950)] shadow-sm"
+          className="w-full rounded-3xl border border-dashed border-slate-200 dark:border-white/10 bg-white dark:bg-[var(--color-navy-900)] p-4 text-left text-sm font-medium text-[var(--color-navy-950)] dark:text-white shadow-sm"
         >
           + Informar aporte ou retirada
         </button>

@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSessao } from "@/lib/auth";
 import { getClientePorId, getCarteiraModeloPorId } from "@/lib/repo";
+import EditarContatoForm from "@/components/EditarContatoForm";
+import PersonalizacaoCores from "@/components/PersonalizacaoCores";
 
 const PERFIL_LABEL: Record<string, string> = {
   conservador: "Conservador",
@@ -46,9 +48,18 @@ export default async function PerfilPage() {
       </section>
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
-        <p className="text-xs text-slate-500 dark:text-slate-400">Dados de contato</p>
-        <p className="text-sm text-slate-800 dark:text-slate-100">{cliente.nome}</p>
-        <p className="text-sm text-slate-500 dark:text-slate-400">{cliente.email}</p>
+        <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">Dados de contato</p>
+        <p className="mb-2 text-sm font-medium text-slate-800 dark:text-slate-100">{cliente.nome}</p>
+        <EditarContatoForm
+          clienteId={cliente.id}
+          email={cliente.email}
+          telefone={cliente.telefone}
+        />
+      </section>
+
+      <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
+        <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">Personalizar cores do app</p>
+        <PersonalizacaoCores />
       </section>
 
       {cliente.objetivo && (

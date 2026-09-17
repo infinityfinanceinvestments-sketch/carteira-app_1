@@ -28,7 +28,9 @@ import {
   type PontoIndicadorBruto,
 } from "./repo/indices";
 
-export type Indicador = "CDI" | "IPCA" | "IBOV" | "SP500";
+export type { Indicador } from "./indicadores";
+import type { Indicador } from "./indicadores";
+export { INDICADORES_VALIDOS, LABEL_INDICADOR } from "./indicadores";
 
 export interface PontoIndice {
   data: string; // yyyy-MM-dd
@@ -225,4 +227,3 @@ export function valorMaisProximo(pontos: PontoIndice[], dataAlvo: string): numbe
   return pontos[0]?.valor ?? null;
 }
 
-export const INDICADORES_VALIDOS: Indicador[] = ["CDI", "IPCA", "IBOV", "SP500"];

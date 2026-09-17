@@ -17,7 +17,8 @@ import {
   listarPontosIntradayDeHoje,
   listarMovimentacoesDoCliente,
 } from "@/lib/repo";
-import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
+import { garantirSnapshotDeHoje, obterHistoricoComTodosBenchmarks } from "@/lib/rentabilidade";
+import type { Indicador } from "@/lib/indices";
 import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
 import { atualizarPrecosDeMercado } from "@/lib/cotacoes";
 import { registrarSnapshotIntraday } from "@/lib/intraday";
@@ -100,7 +101,7 @@ export default async function ClienteDetalhePage({
 
   garantirSnapshotDeHoje(clienteId, total);
   registrarSnapshotIntraday(clienteId, total);
-  const historico = await obterHistoricoComBenchmark(clienteId, cliente.benchmark);
+  const historico = await obterHistoricoComTodosBenchmarks(clienteId);
   const intraday = listarPontosIntradayDeHoje(clienteId);
   const movimentacoesPendentes = listarMovimentacoesDoCliente(clienteId).filter(
     (m) => m.status === "pendente"
@@ -156,7 +157,11 @@ export default async function ClienteDetalhePage({
         <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
           Evolução patrimonial
         </h2>
-        <EvolutionChart dados={historico} intraday={intraday} benchmarkLabel={cliente.benchmark} />
+        <EvolutionChart
+          dados={historico}
+          intraday={intraday}
+          benchmarkPadrao={cliente.benchmark as Indicador}
+        />
       </section>
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">

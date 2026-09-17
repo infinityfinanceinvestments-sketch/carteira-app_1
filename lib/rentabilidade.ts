@@ -69,3 +69,55 @@ export async function obterHistoricoComBenchmark(
     return historico.map((h) => ({ ...h, valor_benchmark: null }));
   }
 }
+
+export type BenchmarksPonto = Partial<Record<Indicador, number | null>>;
+export interface PontoEvolucaoMultiBenchmark extends HistoricoPatrimonio {
+  benchmarks: BenchmarksPonto;
+}
+
+/** Igual a obterHistoricoComBenchmark, mas calcula os QUATRO indicadores de
+ *  uma vez (CDI, IPCA, Ibovespa, S&P 500) em vez de só o benchmark
+ *  configurado no cadastro do cliente — usado no seletor do gráfico de
+ *  evolução, pra trocar de indicador na hora sem precisar de uma nova
+ *  requisição (os dados de cada um já vêm todos calculados). Cada busca
+ *  roda em paralelo e nunca lança exceção: um indicador que falhar some do
+ *  objeto `benchmarks` daquele ponto (fica null), sem derrubar os outros. */
+export async function obterHistoricoComTodosBenchmarks(
+  clienteId: number
+): Promise<PontoEvolucaoMultiBenchmark[]> {
+  const historico = listarHistoricoPatrimonio(clienteId);
+  if (historico.length < 2) return historico.map((h) => ({ ...h, benchmarks: {} }));
+
+  const dataInicial = historico[0].data;
+  const dataFinal = historico[historico.length - 1].data;
+  const baseCarteira = historico[0].valor_total;
+
+  const entradas = await Promise.all(
+    INDICADORES_VALIDOS.map(async (indicador) => {
+      try {
+        const serie = await buscarSerieIndicador(indicador, dataInicial, dataFinal);
+        const baseIndicador = valorMaisProximo(serie, dataInicial);
+        if (baseIndicador == null || baseIndicador === 0) {
+          return [indicador, null] as const;
+        }
+        return [indicador, { serie, baseIndicador }] as const;
+      } catch (erro) {
+        console.error(`Erro buscando benchmark ${indicador} pro histórico`, erro);
+        return [indicador, null] as const;
+      }
+    })
+  );
+
+  return historico.map((h) => {
+    const benchmarks: BenchmarksPonto = {};
+    for (const [indicador, dados] of entradas) {
+      if (!dados) {
+        benchmarks[indicador] = null;
+        continue;
+      }
+      const vi = valorMaisProximo(dados.serie, h.data);
+      benchmarks[indicador] = vi != null ? (vi / dados.baseIndicador) * baseCarteira : null;
+    }
+    return { ...h, benchmarks };
+  });
+}

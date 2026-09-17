@@ -9,11 +9,12 @@ import {
   listarPontosIntradayDeHoje,
   listarMovimentacoesDoCliente,
 } from "@/lib/repo";
-import { garantirSnapshotDeHoje, obterHistoricoComBenchmark } from "@/lib/rentabilidade";
+import { garantirSnapshotDeHoje, obterHistoricoComTodosBenchmarks } from "@/lib/rentabilidade";
 import { atualizarRendaFixaIndexada } from "@/lib/rendaFixaIndexada";
 import { atualizarPrecosDeMercado } from "@/lib/cotacoes";
 import { registrarSnapshotIntraday } from "@/lib/intraday";
-import AllocationDonut from "@/components/AllocationDonut";
+import type { Indicador } from "@/lib/indices";
+import AlocacaoView from "@/components/AlocacaoView";
 import EvolutionChart from "@/components/EvolutionChart";
 import InformarMovimentacao from "@/components/InformarMovimentacao";
 
@@ -48,7 +49,7 @@ export default async function MinhaCarteiraPage() {
 
   garantirSnapshotDeHoje(cliente.id, total);
   registrarSnapshotIntraday(cliente.id, total);
-  const historico = await obterHistoricoComBenchmark(cliente.id, cliente.benchmark);
+  const historico = await obterHistoricoComTodosBenchmarks(cliente.id);
   const intraday = listarPontosIntradayDeHoje(cliente.id);
   const movimentacoes = listarMovimentacoesDoCliente(cliente.id);
 
@@ -93,14 +94,18 @@ export default async function MinhaCarteiraPage() {
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
         <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">Evolução</h2>
-        <EvolutionChart dados={historico} intraday={intraday} benchmarkLabel={cliente.benchmark} />
+        <EvolutionChart
+          dados={historico}
+          intraday={intraday}
+          benchmarkPadrao={cliente.benchmark as Indicador}
+        />
       </section>
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
         <h2 className="mb-3 text-sm font-semibold text-slate-800 dark:text-slate-100">
           Alocação por classe de ativo
         </h2>
-        <AllocationDonut dados={alocacao} />
+        <AlocacaoView alocacao={alocacao} posicoes={posicoes} />
       </section>
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">

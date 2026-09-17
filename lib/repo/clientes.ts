@@ -73,6 +73,24 @@ export function atualizarCarteiraModeloDoCliente(
  *  Só mexe em `clientes` — nome/email do LOGIN (`usuarios`) é atualizado à
  *  parte por atualizarNomeEmailUsuario, já que são tabelas/colunas
  *  diferentes (ver comentário na rota). */
+/** Atualiza só e-mail/telefone de CONTATO (clientes.email) — usada pela
+ *  tela "Meu perfil" do próprio cliente (ver app/api/clientes/[id]/perfil).
+ *  Diferente de atualizarDadosCliente (usada pelo consultor, que também
+ *  mexe em nome/perfil de risco/objetivo) e de atualizarNomeEmailUsuario
+ *  (o e-mail de LOGIN, em usuarios) — o cliente nunca troca o próprio
+ *  e-mail de login por aqui, só o de contato. */
+export function atualizarContatoCliente(
+  clienteId: number,
+  input: { email: string; telefone: string | null }
+): void {
+  const db = getDb();
+  db.prepare(`UPDATE clientes SET email = ?, telefone = ? WHERE id = ?`).run(
+    input.email,
+    input.telefone,
+    clienteId
+  );
+}
+
 export function atualizarDadosCliente(
   clienteId: number,
   input: {
