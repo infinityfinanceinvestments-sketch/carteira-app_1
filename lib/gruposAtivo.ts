@@ -41,3 +41,51 @@ export function agruparAlocacao(alocacao: AlocacaoItem[]): AlocacaoItem[] {
     }))
     .sort((a, b) => b.valor - a.valor);
 }
+
+/** Só os campos de `Posicao` (lib/types.ts) que entram na conta de custo e
+ *  rentabilidade por grupo — evita este arquivo puro precisar importar o
+ *  tipo inteiro (que arrasta lib/db.ts em cadeia se algum dia crescer). */
+export interface PosicaoParaAgrupamento {
+  classe: string;
+  valor_atual: number;
+  quantidade: number;
+  preco_medio: number;
+}
+
+export interface GrupoComRentabilidade {
+  grupo: string;
+  valor: number;
+  percentualDoTotal: number;
+  /** null quando o grupo não tem custo registrado pra calcular em cima
+   *  (ex: todas as posições do grupo com preco_medio zerado) — melhor não
+   *  mostrar rentabilidade nenhuma do que mostrar 0%/Infinity errado. */
+  rentabilidadePercentual: number | null;
+}
+
+/** Agrupa posições (já consolidadas, ver consolidarPosicoes em
+ *  lib/repo/posicoes.ts) nos mesmos grupos "enxutos" de `agruparAlocacao`,
+ *  mas a partir das posições individuais — porque pra calcular rentabilidade
+ *  precisamos do custo de cada posição (quantidade * preco_medio), que o
+ *  agregado por classe técnica (`alocacaoPorClasse`) já não carrega mais. */
+export function agruparComRentabilidade(
+  posicoes: PosicaoParaAgrupamento[]
+): GrupoComRentabilidade[] {
+  const totalValor = posicoes.reduce((soma, p) => soma + p.valor_atual, 0);
+  const porGrupo = new Map<string, { valor: number; custo: number }>();
+  for (const p of posicoes) {
+    const grupo = grupoDaClasse(p.classe);
+    const custo = p.quantidade * p.preco_medio;
+    const entrada = porGrupo.get(grupo) ?? { valor: 0, custo: 0 };
+    entrada.valor += p.valor_atual;
+    entrada.custo += custo;
+    porGrupo.set(grupo, entrada);
+  }
+  return [...porGrupo.entries()]
+    .map(([grupo, { valor, custo }]) => ({
+      grupo,
+      valor,
+      percentualDoTotal: totalValor > 0 ? (valor / totalValor) * 100 : 0,
+      rentabilidadePercentual: custo > 0 ? ((valor - custo) / custo) * 100 : null,
+    }))
+    .sort((a, b) => b.valor - a.valor);
+}

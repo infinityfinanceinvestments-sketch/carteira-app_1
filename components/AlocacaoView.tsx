@@ -2,14 +2,17 @@
 
 import { useMemo, useState } from "react";
 import AllocationDonut, { type AlocacaoItem } from "./AllocationDonut";
-import { agruparAlocacao, grupoDaClasse } from "@/lib/gruposAtivo";
+import { agruparAlocacao, agruparComRentabilidade, grupoDaClasse } from "@/lib/gruposAtivo";
 import { corDaClasse } from "@/lib/colors";
+import VariacaoBadge, { formatPercent } from "@/components/VariacaoBadge";
 
 interface PosicaoResumo {
   id: number;
   ativo: string;
   classe: string;
   valor_atual: number;
+  quantidade: number;
+  preco_medio: number;
 }
 
 const formatBRL = (v: number) =>
@@ -26,9 +29,22 @@ export default function AlocacaoView({
   alocacao: AlocacaoItem[];
   posicoes: PosicaoResumo[];
 }) {
-  const [modo, setModo] = useState<"pizza" | "lista">("pizza");
+  // Começa em "lista" porque é o modo que já mostra o que o cliente mais
+  // pede: valor e rentabilidade por classe logo abaixo do gráfico de
+  // evolução, sem precisar trocar de aba primeiro.
+  const [modo, setModo] = useState<"pizza" | "lista">("lista");
 
   const alocacaoAgrupada = useMemo(() => agruparAlocacao(alocacao), [alocacao]);
+
+  // Rentabilidade por grupo (custo = quantidade * preço médio de cada
+  // posição, comparado ao valor atual) — ver lib/gruposAtivo.ts.
+  const rentabilidadePorGrupo = useMemo(() => {
+    const mapa = new Map<string, number | null>();
+    for (const g of agruparComRentabilidade(posicoes)) {
+      mapa.set(g.grupo, g.rentabilidadePercentual);
+    }
+    return mapa;
+  }, [posicoes]);
 
   const grupos = useMemo(() => {
     const porGrupo = new Map<string, { valor: number; itens: PosicaoResumo[] }>();
@@ -39,8 +55,17 @@ export default function AlocacaoView({
       entrada.valor += p.valor_atual;
       entrada.itens.push(p);
     }
-    return [...porGrupo.entries()].sort((a, b) => b[1].valor - a[1].valor);
-  }, [posicoes]);
+    const totalValor = posicoes.reduce((soma, p) => soma + p.valor_atual, 0);
+    return [...porGrupo.entries()]
+      .map(([grupo, dados]) => ({
+        grupo,
+        valor: dados.valor,
+        itens: dados.itens,
+        percentualDoTotal: totalValor > 0 ? (dados.valor / totalValor) * 100 : 0,
+        rentabilidadePercentual: rentabilidadePorGrupo.get(grupo) ?? null,
+      }))
+      .sort((a, b) => b.valor - a.valor);
+  }, [posicoes, rentabilidadePorGrupo]);
 
   return (
     <div>
@@ -69,22 +94,34 @@ export default function AlocacaoView({
         </div>
       ) : (
         <div className="space-y-4">
-          {grupos.map(([grupo, dados]) => (
+          {grupos.map(({ grupo, valor, itens, percentualDoTotal, rentabilidadePercentual }) => (
             <div key={grupo}>
-              <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-slate-100">
+              <div className="mb-1.5 flex items-start justify-between gap-2">
+                <span className="flex items-start gap-2">
                   <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
                     style={{ backgroundColor: corDaClasse(grupo) }}
                   />
-                  {grupo}
+                  <span>
+                    <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">
+                      {grupo}
+                    </span>
+                    <span className="block text-xs text-slate-400 dark:text-slate-500">
+                      {formatPercent(percentualDoTotal)}
+                    </span>
+                  </span>
                 </span>
-                <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                  {formatBRL(dados.valor)}
+                <span className="text-right">
+                  <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">
+                    {formatBRL(valor)}
+                  </span>
+                  <span className="block">
+                    <VariacaoBadge valor={rentabilidadePercentual} />
+                  </span>
                 </span>
               </div>
               <ul className="space-y-1 pl-[18px]">
-                {dados.itens
+                {itens
                   .slice()
                   .sort((a, b) => b.valor_atual - a.valor_atual)
                   .map((p) => (

@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { formatHoraBr } from "@/lib/formatacao";
 import { INDICADORES_VALIDOS, LABEL_INDICADOR, type Indicador } from "@/lib/indicadores";
+import VariacaoBadge, { formatPercent } from "@/components/VariacaoBadge";
 
 export interface PontoEvolucao {
   data: string;
@@ -43,9 +44,6 @@ const formatBRLCompact = (v: number) =>
     notation: "compact",
     maximumFractionDigits: 1,
   });
-
-const formatPercent = (v: number) =>
-  `${v.toFixed(2).replace(".", ",")}%`;
 
 const NOMES_MES = [
   "jan",
@@ -99,29 +97,6 @@ function filtrarPorPeriodo(dados: PontoEvolucao[], dias: number | null): PontoEv
   const corte = new Date(maisRecente);
   corte.setDate(corte.getDate() - dias);
   return dados.filter((d) => new Date(d.data + "T00:00:00") >= corte);
-}
-
-/** Setinha + percentual colorido (verde ganho / vermelho perda) — usado no
- *  número principal de rentabilidade e na linha do benchmark logo abaixo do
- *  gráfico, no mesmo estilo dos apps de corretora. */
-function VariacaoBadge({
-  valor,
-  tamanho = "normal",
-}: {
-  valor: number | null;
-  tamanho?: "normal" | "grande";
-}) {
-  if (valor == null || Number.isNaN(valor)) return null;
-  const positivo = valor >= 0;
-  return (
-    <span
-      className={`inline-flex items-center gap-0.5 font-semibold ${
-        tamanho === "grande" ? "text-base" : "text-sm"
-      } ${positivo ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}`}
-    >
-      {positivo ? "↑" : "↓"} {formatPercent(Math.abs(valor))}
-    </span>
-  );
 }
 
 /** <select> nativo estilizado como "pill" com setinha — o menu suspenso que
