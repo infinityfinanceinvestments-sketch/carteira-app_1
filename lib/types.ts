@@ -40,6 +40,9 @@ export interface Cliente {
   objetivo: string | null;
   carteira_modelo_id: number | null;
   benchmark: string;
+  // Fee based — ver lib/repo/pagamentos.ts. `valor_fee` null = "a definir".
+  valor_fee: number | null;
+  dia_vencimento_fee: number | null;
   criado_em: string;
 }
 
@@ -215,6 +218,18 @@ export interface ObjetivoComProgresso extends Objetivo {
   meta: number;
   progressoPercentual: number;
   concluido: boolean;
+}
+
+// Status de pagamento do fee mensal (ver clientes.valor_fee/
+// dia_vencimento_fee) — uma linha por mês em que o consultor confirmou (ou
+// reabriu) o pagamento. Mês sem linha = tratado como não pago, ver
+// lib/repo/pagamentos.ts.
+export interface PagamentoFee {
+  id: number;
+  cliente_id: number;
+  mes_referencia: string; // 'YYYY-MM'
+  pago: number; // 0 ou 1
+  pago_em: string | null;
 }
 
 // Recado do consultor pros clientes dele (mural tipo mini-informativo) —

@@ -33,6 +33,11 @@ CREATE TABLE IF NOT EXISTS clientes (
   objetivo TEXT,
   carteira_modelo_id INTEGER REFERENCES carteiras_modelo(id),
   benchmark TEXT NOT NULL DEFAULT 'CDI',
+  -- Fee based: valor do fee mensal (o consultor define por cliente — NULL
+  -- = "a definir") e o dia do mês (1-31) em que o cliente costuma pagar.
+  -- Ver pagamentos_fee abaixo pro histórico de "pago/não pago" mês a mês.
+  valor_fee REAL,
+  dia_vencimento_fee INTEGER,
   criado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -275,6 +280,20 @@ CREATE TABLE IF NOT EXISTS recados (
   criado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Controle mensal de pagamento do fee (ver clientes.valor_fee/
+-- dia_vencimento_fee) — uma linha por mês em que o consultor marcou o
+-- status. Mês sem linha aqui é tratado como "não pago" (ver
+-- lib/repo/pagamentos.ts), então só precisamos gravar quando o pagamento é
+-- confirmado (ou reaberto, se o consultor desmarcar por engano).
+CREATE TABLE IF NOT EXISTS pagamentos_fee (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  cliente_id INTEGER NOT NULL REFERENCES clientes(id) ON DELETE CASCADE,
+  mes_referencia TEXT NOT NULL, -- 'YYYY-MM'
+  pago INTEGER NOT NULL DEFAULT 0,
+  pago_em TEXT,
+  UNIQUE (cliente_id, mes_referencia)
+);
+
 -- Índices nas colunas de chave estrangeira mais consultadas — as tabelas já
 -- nasceram com PRIMARY KEY (indexado automaticamente) e a UNIQUE de
 -- favoritos_mercado (que o SQLite também indexa sozinho), mas nenhuma FK
@@ -303,3 +322,4 @@ CREATE INDEX IF NOT EXISTS idx_codigos_verificacao_login_usuario_id ON codigos_v
 CREATE INDEX IF NOT EXISTS idx_dispositivos_confiaveis_usuario_id ON dispositivos_confiaveis(usuario_id);
 -- token_hash já é UNIQUE (SQLite indexa automaticamente), não precisa de índice à parte.
 CREATE INDEX IF NOT EXISTS idx_recados_consultor_id ON recados(consultor_id);
+CREATE INDEX IF NOT EXISTS idx_pagamentos_fee_cliente_id ON pagamentos_fee(cliente_id);

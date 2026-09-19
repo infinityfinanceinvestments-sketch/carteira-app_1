@@ -152,6 +152,11 @@ export default function EvolutionChart({
   const [modo, setModo] = useState<Modo>("rentabilidade");
   const [periodo, setPeriodo] = useState<Periodo>("tudo");
   const [indicador, setIndicador] = useState<Indicador>(benchmarkPadrao ?? "CDI");
+  // Índice do ponto clicado na linha de rentabilidade (pra mostrar "quanto a
+  // carteira estava rendendo" naquela data específica) — null enquanto nada
+  // foi clicado ainda. Reseta sempre que o período/indicador muda, porque o
+  // índice não corresponde mais aos mesmos dados.
+  const [pontoClicadoIdx, setPontoClicadoIdx] = useState<number | null>(null);
   const eIntraday = periodo === "1d";
 
   const dadosFiltrados = useMemo(() => {
@@ -225,6 +230,21 @@ export default function EvolutionChart({
   const dadosInsuficientes =
     modo === "rentabilidade" ? formatadoPercentual.length < 2 : formatadoReais.length < 2;
 
+  // Ponto que o cliente clicou na linha de rentabilidade, se ainda válido
+  // pro conjunto de dados atual (ver reset no onClick do período/modo).
+  const pontoClicado =
+    pontoClicadoIdx != null ? formatadoPercentual[pontoClicadoIdx] : undefined;
+
+  // O tipo exato do evento de clique do recharts (CategoricalChartFunc) é
+  // complicado de declarar aqui; só lemos o índice em runtime.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function aoClicarNoGrafico(estado: any) {
+    const idx = Number(estado?.activeTooltipIndex);
+    if (Number.isInteger(idx)) {
+      setPontoClicadoIdx(idx);
+    }
+  }
+
   return (
     <div className="w-full">
       <div className="mb-3 flex gap-1">
@@ -275,13 +295,19 @@ export default function EvolutionChart({
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <SeletorPill
           value={periodo}
-          onChange={setPeriodo}
+          onChange={(v) => {
+            setPeriodo(v);
+            setPontoClicadoIdx(null);
+          }}
           options={OPCOES_PERIODO.map((o) => ({ valor: o.valor, label: o.label }))}
         />
         {!eIntraday && (
           <SeletorPill
             value={indicador}
-            onChange={setIndicador}
+            onChange={(v) => {
+              setIndicador(v);
+              setPontoClicadoIdx(null);
+            }}
             options={INDICADORES_VALIDOS.map((ind) => ({ valor: ind, label: LABEL_INDICADOR[ind] }))}
           />
         )}
@@ -305,6 +331,8 @@ export default function EvolutionChart({
                 <ComposedChart
                   data={formatadoPercentual}
                   margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                  onClick={aoClicarNoGrafico}
+                  style={{ cursor: "pointer" }}
                 >
                   <defs>
                     <linearGradient id="gradienteRentabilidade" x1="0" y1="0" x2="0" y2="1">
@@ -312,7 +340,6 @@ export default function EvolutionChart({
                       <stop offset="100%" stopColor="var(--color-navy-950)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid stroke="var(--color-chart-grid)" vertical={false} />
                   <XAxis
                     dataKey="label"
                     tick={{ fontSize: 11, fill: "var(--color-chart-axis)" }}
@@ -349,6 +376,7 @@ export default function EvolutionChart({
                     strokeWidth={2.5}
                     fill="url(#gradienteRentabilidade)"
                     dot={false}
+                    activeDot={{ r: 5, stroke: "#1c3f6e", strokeWidth: 2, fill: "#fff" }}
                   />
                   {formatadoPercentual.some((d) => d.valor_benchmark_pct != null) && (
                     <Line
@@ -423,6 +451,19 @@ export default function EvolutionChart({
               </span>
               <VariacaoBadge valor={retornoBenchmark} />
             </div>
+          )}
+
+          {modo === "rentabilidade" && pontoClicado ? (
+            <div className="mt-2 flex items-center justify-between rounded-xl bg-slate-100 dark:bg-white/10 px-3 py-2 text-sm">
+              <span className="text-slate-500 dark:text-slate-400">{pontoClicado.label}</span>
+              <VariacaoBadge valor={pontoClicado.valor_total_pct} />
+            </div>
+          ) : (
+            modo === "rentabilidade" && (
+              <p className="mt-2 text-center text-[11px] text-slate-400 dark:text-slate-500">
+                Toque num ponto da linha pra ver a rentabilidade naquela data.
+              </p>
+            )
           )}
         </>
       )}

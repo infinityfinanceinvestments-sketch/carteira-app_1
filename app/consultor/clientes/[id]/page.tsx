@@ -16,6 +16,8 @@ import {
   listarObjetivosComProgresso,
   listarPontosIntradayDeHoje,
   listarMovimentacoesDoCliente,
+  getStatusPagamento,
+  mesReferenciaAtual,
 } from "@/lib/repo";
 import { garantirSnapshotDeHoje, obterHistoricoComTodosBenchmarks } from "@/lib/rentabilidade";
 import type { Indicador } from "@/lib/indices";
@@ -39,7 +41,28 @@ import AreaEmConstrucao from "@/components/AreaEmConstrucao";
 import { PROVENTOS_HABILITADO } from "@/lib/feature-flags";
 import ObjetivosSection from "@/components/ObjetivosSection";
 import RevisarMovimentacoes from "@/components/RevisarMovimentacoes";
+import PagamentoFeeSection from "@/components/PagamentoFeeSection";
 import { formatDataHoraBr } from "@/lib/formatacao";
+
+const NOMES_MES_COMPLETO = [
+  "Janeiro",
+  "Fevereiro",
+  "Março",
+  "Abril",
+  "Maio",
+  "Junho",
+  "Julho",
+  "Agosto",
+  "Setembro",
+  "Outubro",
+  "Novembro",
+  "Dezembro",
+];
+
+function formatMesReferenciaLabel(mesReferencia: string): string {
+  const [ano, mes] = mesReferencia.split("-");
+  return `${NOMES_MES_COMPLETO[Number(mes) - 1]}/${ano}`;
+}
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -106,6 +129,8 @@ export default async function ClienteDetalhePage({
   const movimentacoesPendentes = listarMovimentacoesDoCliente(clienteId).filter(
     (m) => m.status === "pendente"
   );
+  const mesReferencia = mesReferenciaAtual();
+  const pagoNoMes = getStatusPagamento(clienteId, mesReferencia)?.pago === 1;
 
   return (
     <div className="space-y-5">
@@ -147,6 +172,14 @@ export default async function ClienteDetalhePage({
       />
 
       <GerarLinkRedefinicao usuarioId={cliente.usuario_id} nomeCliente={cliente.nome} />
+
+      <PagamentoFeeSection
+        clienteId={clienteId}
+        valorFeeInicial={cliente.valor_fee}
+        diaVencimentoInicial={cliente.dia_vencimento_fee}
+        pagoNoMes={pagoNoMes}
+        mesReferenciaLabel={formatMesReferenciaLabel(mesReferencia)}
+      />
 
       <section className="rounded-3xl card-sheen p-4 shadow-[var(--shadow-card)] ring-1 ring-slate-900/5 dark:ring-white/10">
         <p className="text-xs text-slate-500 dark:text-slate-400">Patrimônio atual</p>

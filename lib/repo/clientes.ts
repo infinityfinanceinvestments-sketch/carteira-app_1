@@ -91,6 +91,21 @@ export function atualizarContatoCliente(
   );
 }
 
+/** Define o valor do fee mensal e o dia de vencimento (aba "Pagamento" do
+ *  perfil — ver components/PagamentoFeeSection.tsx). `valorFee` null = "a
+ *  definir" (o consultor ainda não combinou o valor com o cliente). */
+export function atualizarConfiguracaoFee(
+  clienteId: number,
+  input: { valor_fee: number | null; dia_vencimento_fee: number | null }
+): void {
+  const db = getDb();
+  db.prepare(`UPDATE clientes SET valor_fee = ?, dia_vencimento_fee = ? WHERE id = ?`).run(
+    input.valor_fee,
+    input.dia_vencimento_fee,
+    clienteId
+  );
+}
+
 export function atualizarDadosCliente(
   clienteId: number,
   input: {

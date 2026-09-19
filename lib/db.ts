@@ -45,6 +45,7 @@ function migrate(db: DatabaseSync) {
   migrarTipoNotificacaoMovimentacao(db);
   migrarTipoNotificacaoObjetivoCriado(db);
   migrarTipoObjetivoValorAtivo(db);
+  migrarColunasFeeClientes(db);
 
   const schemaPath = path.join(process.cwd(), "lib", "schema.sql");
   const schema = fs.readFileSync(schemaPath, "utf-8");
@@ -308,6 +309,25 @@ function migrarTipoObjetivoValorAtivo(db: DatabaseSync) {
   } catch (erro) {
     db.exec("ROLLBACK");
     throw erro;
+  }
+}
+
+/** Adiciona as colunas `valor_fee` e `dia_vencimento_fee` a `clientes`
+ *  (pagamento fee based — ver components de perfil/pagamento) — mesma
+ *  técnica de migrarColunaTelefoneClientes: sem CHECK/NOT NULL, dá pra usar
+ *  ALTER TABLE ADD COLUMN direto. Idempotente via PRAGMA table_info. */
+function migrarColunasFeeClientes(db: DatabaseSync) {
+  const tabela = db
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'clientes'`)
+    .get();
+  if (!tabela) return; // banco novo — schema.sql abaixo já cria com as colunas
+
+  const colunas = db.prepare(`PRAGMA table_info(clientes)`).all() as { name: string }[];
+  if (!colunas.some((c) => c.name === "valor_fee")) {
+    db.exec(`ALTER TABLE clientes ADD COLUMN valor_fee REAL`);
+  }
+  if (!colunas.some((c) => c.name === "dia_vencimento_fee")) {
+    db.exec(`ALTER TABLE clientes ADD COLUMN dia_vencimento_fee INTEGER`);
   }
 }
 
